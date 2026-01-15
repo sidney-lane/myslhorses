@@ -1,69 +1,126 @@
-I want to make a script that has the following script
-Details:
-- LSL secondlife script (or scripts)
-- Placed in box object I make
-- Other (no copy, no mod) Objects will be placed in the box
+# Project Details
 
-Script Functions
-- Fetches name, description & owner of all objects in the box object that have "SUCCESSFUL_BUNDLE" string OR have "BOXED_BUNDLES" in description (this boxed bundles item will have a different script - later)
-  - Saves to the Box Linkset as Data. (uses UUID of object for this)
-- Counts number of objects in the box Object (alongside it)
-   -> this MUST update if objects are taken OUT of the box. 
-  -> saves this to linkset data 
-- 
+---
 
-Linkset Data Object
-- Metadata
-  -> Total: Number of (valid) Objects (integer)
-  -> UUID: key/ID of each (valid) Object (string?)
-  -> Owner of Box (Owner_Object)
-- Object Data
-  -> UUID: key (integer) [fetched from description]
-  -> Name: object Name (string)
-  -> OwnerName (object owner)
-  -> Stats (Stats_Object)
-- Owner_Object
-  -> Name (string)
-  -> Id (string?)
-- Stats_Object
-  -> UUID: key/id (string)
-  -> Description (string)
-  -> Name (string)
-  -> Price (positive integer) 
-  -> Stats (long string - what is the char limit on SL string data?)
- 
-  
+## Overview
 
+I want to create a script that performs the following functions.
 
-Script requirements
-- Menu on Touch
- -> Start (owner only): starts the config / scripts
- -> Stop (owner only): stops the scripts
- -> Reset (owner only): resets the scripts & wipes saved linkset data
--> Name (owner only): names the box
--> Text On (owner only)
--> Text Off (owner only)
--> Set Logo (owner only)
--> Give Help Notecard (owner of box only)
--> Add Price (owner only) 
-    - second menu 
-        - Price One
-        - Price All (will cycle through each object in the box for user to input a price)
-        - 
--> Give Stats Notecard
--> Give Landmark
+---
 
+## Project Requirements
 
-Useful references:
-- https://community.secondlife.com/forums/topic/361128-can-you-use-a-script-to-write-text-to-a-notecard/
-- https://wiki.secondlife.com/wiki/ 
-- 
+### Details
+- **Language:** LSL (Second Life script or scripts)
+- **Container:** Script is placed inside a box object that I create
+- **Contents:** Other objects (no-copy, no-mod) will be placed inside the box
 
+---
 
+## Script Functions
 
+- **Object Discovery & Filtering**
+  - Fetch the **name**, **description**, and **owner** of all objects inside the box that:
+    - Contain the string `"SUCCESSFUL_BUNDLE"` **OR**
+    - Contain `"BOXED_BUNDLES"` in the description  
+      - (Note: boxed bundles will use a different script later)
+  - Save this data to **Linkset Data**
+  - Use the **UUID of each object** as the primary identifier
 
- 
-1. Enter Bundle Description of Object 
-    -> share notecard help...  (important for my library)
-1. Enter Stats (include name) from local chat 
-    -> confirm UUID and stats (especially UUID)
+- **Object Counting**
+  - Count the total number of objects in the box
+  - This **must update dynamically** if objects are removed from the box
+  - Save the count to **Linkset Data**
+
+---
+
+## Linkset Data Shape
+
+### Metadata
+- `Total`  
+  - Number of valid objects (integer)
+- `UUID`  
+  - Key/ID of each valid object (string?)
+- `Owner_Object`  
+  - Owner of the box
+
+### Object Data
+- `UUID`  
+  - Key (integer) — fetched from description
+- `Name`  
+  - Object name (string)
+- `OwnerName`  
+  - Object owner name
+- `Stats`  
+  - `Stats_Object`
+
+### Owner_Object
+- `Name`  
+  - Owner name (string)
+- `Id`  
+  - Owner ID (string?)
+
+### Stats_Object
+- `UUID`  
+  - Key/ID (string)
+- `Description`  
+  - Object description (string)
+- `Name`  
+  - Object name (string)
+- `Price`  
+  - Positive integer
+- `Stats`  
+  - Long string  
+  - ❓ *What is the character limit on SL string data?*
+
+---
+
+## Script Requirements
+
+### Touch Menu
+
+- **Owner-only options**
+  - `Start` — starts configuration/scripts
+  - `Stop` — stops scripts
+  - `Reset` — resets scripts and wipes saved linkset data
+  - `Name` — set the box name
+  - `Text On`
+  - `Text Off`
+  - `Set Logo`
+  - `Give Help Notecard`
+  - `Add Price`
+    - Sub-menu:
+      - `Price One`
+      - `Price All`  
+        - Cycles through each object in the box and prompts the user to input a price
+
+- **General options**
+  - `Give Stats Notecard`
+  - `Give Landmark`
+
+---
+
+## Useful References
+
+- Writing text to a notecard:  
+  https://community.secondlife.com/forums/topic/361128-can-you-use-a-script-to-write-text-to-a-notecard/
+
+- Second Life Wiki (LSL reference):  
+  https://wiki.secondlife.com/wiki/
+
+---
+
+# DEPRECATED NOTES
+
+## User Input Flow
+
+1. **Enter Bundle Description**
+   - Enter bundle description for the object
+   - Provide a help notecard  
+     *(Important for my library)*
+
+2. **Enter Stats**
+   - Stats (including name) are captured from local chat
+   - Confirm:
+     - UUID
+     - Stats (especially UUID correctness)
