@@ -43,6 +43,8 @@ I want to create a script that performs the following functions.
   - Key/ID of each valid object (string?)
 - `Owner_Object`  
   - Owner of the box
+- `SlURL`
+ - Location or Last Location of this Object
 
 ### Object Data
 - `UUID`  
