@@ -1,0 +1,7 @@
+name = "bundle-stats-worker"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+kv_namespaces = [
+  { binding = "STATS_CACHE", id = "<YOUR_KV_NAMESPACE_ID>" }
+]
