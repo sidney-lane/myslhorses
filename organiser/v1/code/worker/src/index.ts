@@ -4,24 +4,57 @@ export interface Env {
 
 const BUNDLE_URL = "https://amarettobreedables.com/bundleData.php?id=";
 
+function extractSection(html: string, header: string): string {
+  const headerIndex = html.indexOf(header);
+  if (headerIndex === -1) return "";
+  const slice = html.slice(headerIndex);
+  const endIndex = slice.indexOf("</p>");
+  if (endIndex === -1) return "";
+  return slice.slice(0, endIndex);
+}
+
+function extractField(section: string, label: string): string | null {
+  const regex = new RegExp(`${label}\\s*:\\s*([^<]+)<br`, "i");
+  const match = section.match(regex);
+  return match ? match[1].trim() : null;
+}
+
 function extractStats(html: string): { statsText: string; traits: Record<string, string> } {
   const traits: Record<string, string> = {};
+  const bundleSection = extractSection(html, "The Bundle");
+  if (!bundleSection) {
+    return { statsText: "", traits };
+  }
 
-  const breedMatch = html.match(/Breed\s*:\s*<[^>]*>([^<]+)/i);
-  const coatMatch = html.match(/Coat\s*:\s*<[^>]*>([^<]+)/i);
-  const eyesMatch = html.match(/Eyes\s*:\s*<[^>]*>([^<]+)/i);
-  const genMatch = html.match(/Gen(?:eration)?\s*:\s*<[^>]*>([^<]+)/i);
+  const name = extractField(bundleSection, "Name");
+  const gender = extractField(bundleSection, "Gender");
+  const age = extractField(bundleSection, "Age");
+  const owner = extractField(bundleSection, "Current Owner");
+  const breed = extractField(bundleSection, "Breed");
+  const eye = extractField(bundleSection, "Eye");
+  const mane = extractField(bundleSection, "Mane");
+  const tail = extractField(bundleSection, "Tail");
+  const uuid = extractField(bundleSection, "UUID");
+  const version = extractField(bundleSection, "Version");
 
-  if (breedMatch) traits.breed = breedMatch[1].trim();
-  if (coatMatch) traits.coat = coatMatch[1].trim();
-  if (eyesMatch) traits.eyes = eyesMatch[1].trim();
-  if (genMatch) traits.generation = genMatch[1].trim();
+  if (name) traits.name = name;
+  if (gender) traits.gender = gender;
+  if (age) traits.age = age;
+  if (owner) traits.owner = owner;
+  if (breed) traits.breed = breed;
+  if (eye) traits.eye = eye;
+  if (mane) traits.mane = mane;
+  if (tail) traits.tail = tail;
+  if (uuid) traits.uuid = uuid;
+  if (version) traits.version = version;
 
   const statsText = [
-    traits.breed ? `Breed: ${traits.breed}` : null,
-    traits.coat ? `Coat: ${traits.coat}` : null,
-    traits.eyes ? `Eyes: ${traits.eyes}` : null,
-    traits.generation ? `Gen: ${traits.generation}` : null,
+    breed ? `Breed: ${breed}` : null,
+    eye ? `Eye: ${eye}` : null,
+    mane ? `Mane: ${mane}` : null,
+    tail ? `Tail: ${tail}` : null,
+    gender ? `Gender: ${gender}` : null,
+    version ? `Version: ${version}` : null,
   ]
     .filter(Boolean)
     .join(" | ");

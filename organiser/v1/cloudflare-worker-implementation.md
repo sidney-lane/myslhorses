@@ -3,7 +3,7 @@
 This document provides a **Cloudflare Worker** implementation that:
 1. Accepts bundle UUIDs from Second Life (`POST /api/ingest`).
 2. Fetches bundle stats from `bundleData.php?id=<UUID>`.
-3. Parses minimal stats from the HTML response.
+3. Parses bundle stats from the HTML response (uses the **The Bundle** section fields like `Name`, `Breed`, `Eye`, `Mane`, `Tail`, `UUID`, `Version`).
 4. Returns a concise `stats_text` to LSL (`GET /api/bundles/:uuid/stats`).
 
 > Note: Parsing depends on the current HTML structure of the Amaretto site. If HTML changes, update the regex/selectors.
@@ -21,25 +21,40 @@ export interface Env {
 const BUNDLE_URL = "https://amarettobreedables.com/bundleData.php?id=";
 
 function extractStats(html: string): { statsText: string; traits: Record<string, string> } {
-  // Example very light parsing. You should adjust selectors/regex once you inspect real HTML.
   const traits: Record<string, string> = {};
 
-  // Sample regex patterns (replace with real patterns from the page)
-  const breedMatch = html.match(/Breed\s*:\s*<[^>]*>([^<]+)/i);
-  const coatMatch = html.match(/Coat\s*:\s*<[^>]*>([^<]+)/i);
-  const eyesMatch = html.match(/Eyes\s*:\s*<[^>]*>([^<]+)/i);
-  const genMatch = html.match(/Gen(?:eration)?\s*:\s*<[^>]*>([^<]+)/i);
+  const bundleSection = extractSection(html, "The Bundle");
+  if (!bundleSection) return { statsText: "", traits };
 
-  if (breedMatch) traits.breed = breedMatch[1].trim();
-  if (coatMatch) traits.coat = coatMatch[1].trim();
-  if (eyesMatch) traits.eyes = eyesMatch[1].trim();
-  if (genMatch) traits.generation = genMatch[1].trim();
+  const name = extractField(bundleSection, "Name");
+  const gender = extractField(bundleSection, "Gender");
+  const age = extractField(bundleSection, "Age");
+  const owner = extractField(bundleSection, "Current Owner");
+  const breed = extractField(bundleSection, "Breed");
+  const eye = extractField(bundleSection, "Eye");
+  const mane = extractField(bundleSection, "Mane");
+  const tail = extractField(bundleSection, "Tail");
+  const uuid = extractField(bundleSection, "UUID");
+  const version = extractField(bundleSection, "Version");
+
+  if (name) traits.name = name;
+  if (gender) traits.gender = gender;
+  if (age) traits.age = age;
+  if (owner) traits.owner = owner;
+  if (breed) traits.breed = breed;
+  if (eye) traits.eye = eye;
+  if (mane) traits.mane = mane;
+  if (tail) traits.tail = tail;
+  if (uuid) traits.uuid = uuid;
+  if (version) traits.version = version;
 
   const statsText = [
-    traits.breed ? `Breed: ${traits.breed}` : null,
-    traits.coat ? `Coat: ${traits.coat}` : null,
-    traits.eyes ? `Eyes: ${traits.eyes}` : null,
-    traits.generation ? `Gen: ${traits.generation}` : null,
+    breed ? `Breed: ${breed}` : null,
+    eye ? `Eye: ${eye}` : null,
+    mane ? `Mane: ${mane}` : null,
+    tail ? `Tail: ${tail}` : null,
+    gender ? `Gender: ${gender}` : null,
+    version ? `Version: ${version}` : null,
   ]
     .filter(Boolean)
     .join(" | ");
