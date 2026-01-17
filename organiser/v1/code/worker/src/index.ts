@@ -8,9 +8,12 @@ function extractSection(html: string, header: string): string {
   const headerIndex = html.indexOf(header);
   if (headerIndex === -1) return "";
   const slice = html.slice(headerIndex);
-  const endIndex = slice.indexOf("</p>");
+  const dataStart = slice.indexOf("<p class=\"dataOutput\">");
+  if (dataStart === -1) return "";
+  const dataSlice = slice.slice(dataStart);
+  const endIndex = dataSlice.indexOf("</p>");
   if (endIndex === -1) return "";
-  return slice.slice(0, endIndex);
+  return dataSlice.slice(0, endIndex);
 }
 
 function extractField(section: string, label: string): string | null {

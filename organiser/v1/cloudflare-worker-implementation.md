@@ -3,7 +3,7 @@
 This document provides a **Cloudflare Worker** implementation that:
 1. Accepts bundle UUIDs from Second Life (`POST /api/ingest`).
 2. Fetches bundle stats from `bundleData.php?id=<UUID>`.
-3. Parses bundle stats from the HTML response (uses the **The Bundle** section fields like `Name`, `Breed`, `Eye`, `Mane`, `Tail`, `UUID`, `Version`).
+3. Parses bundle stats from the HTML response by locating the **The Bundle** header and reading the next `<p class="dataOutput">` block (fields like `Name`, `Breed`, `Eye`, `Mane`, `Tail`, `UUID`, `Version`).
 4. Returns a concise `stats_text` to LSL (`GET /api/bundles/:uuid/stats`).
 
 > Note: Parsing depends on the current HTML structure of the Amaretto site. If HTML changes, update the regex/selectors.
