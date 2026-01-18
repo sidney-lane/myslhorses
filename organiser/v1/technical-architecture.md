@@ -106,6 +106,18 @@ The following functions are expected to be available in LSL and map directly to 
 - `llMessageLinked(link, num, msg, id)`
   - **Use**: initialization, reset, inventory monitoring, and inter-script commands.
 
+### 4.7 LSL Constraints & Adjustments
+The LSL Portal documents several hard limits that inform implementation choices. We must design around the following constraints and apply corresponding adjustments:
+
+| Area | Constraints (LSL limits) | Required Adjustments |
+| --- | --- | --- |
+| **Timers** | Timer events are not guaranteed to fire faster than the simulator event queue; sub-0.1s timers are impractical and subject to delay. | Use event-driven inventory scans (`CHANGED_INVENTORY`) and a conservative fallback timer (≥ 1.0s) for refresh; never rely on high-frequency timers for scanning. |
+| **Sensors** | `llSensor` radius is capped at 96.0m and arc at PI; each scan only returns up to 32 detected objects per call. | If sensors are used for future proximity features, constrain scans to a targeted arc and run at a low cadence (≥ 2.0s) with pagination logic or follow-up scans for crowded regions. |
+| **String Length** | Strings are limited by script memory, but communication APIs truncate (e.g., chat at 1024 chars; notecard lines at 1023 chars). | Keep descriptions, menu payloads, and stored metadata short; chunk or paginate long stats outputs and avoid long single-line notecards. |
+| **HTTP Requests** | `llHTTPRequest` throttles: ~25 requests / 20 seconds per object and ~1000 requests / 20 seconds per owner; response bodies default to 2048 bytes (configurable). | Batch outbound updates, debounce pushes, and implement exponential backoff on `NULL_KEY` responses; cap payloads and split large datasets into multiple requests. |
+| **Media Functions** | `llSetPrimMediaParams` has a 1.0s script delay; media URLs are capped at 1024 chars; whitelist limits are 64 URLs or 1024 chars. | Avoid rapid media refresh; set a minimum media refresh interval (≥ 2.0s) and keep URL/whitelist payloads compact. |
+| **Permissions** | Viewer caps permission dialogs to 5 requests per 10 seconds; scripts may hold permissions for only one agent at a time. | Centralize permission requests in a single script, avoid bursty permission prompts, and gate permission-dependent actions until `run_time_permissions` confirms grant. |
+
 ---
 
 ## 5. Alternate Architecture Options
