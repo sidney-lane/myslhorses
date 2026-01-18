@@ -1,5 +1,10 @@
 LSL script + supabase backend + write to github pages / cloudflare? so that we can put status on a media prim face
 
+## Documentation
+- Requirements: [REQUIREMENTS.md](./REQUIREMENTS.md)
+- Technical Architecture: [TECHNICAL_ARCHITECTURE.md](./TECHNICAL_ARCHITECTURE.md)
+- Build Steps: [BUILD_STEPS.md](./BUILD_STEPS.md)
+
 ### Display board (should be able to "link" to other display boards - ie there will be a "master" display board and then individual "pod" boards)
 Board Has:
 - Project/Pod Title
@@ -83,4 +88,3 @@ Verify "Allow media auto-play" is checked.
 Clear viewer cache.
 Touch the screen to manually start it.
 Check if the object script is resetting. 
-
