@@ -77,26 +77,19 @@ integer showMenu(key id)
 {
     list buttons = [];
     list lines = [];
-    list freshTeleporters = [];
     integer i;
 
     for (i = 0; i < llGetListLength(TELEPORTERS); i += STRIDE)
     {
         key k = llList2Key(TELEPORTERS, i);
         string base = llList2String(TELEPORTERS, i + 1);
-        if (llGetListLength(llGetObjectDetails(k, [OBJECT_POS])) == 1)
-        {
-            integer number = llGetListLength(buttons) + 1;
-            string label = (string)number;
+        integer number = (i / STRIDE) + 1;
+        string label = (string)number;
 
-            freshTeleporters += [k, base];
-            MENU_MAP += [label, k];
-            buttons += [label];
-            lines += [label + ". " + base];
-        }
+        MENU_MAP += [label, k];
+        buttons += [label];
+        lines += [label + ". " + base];
     }
-
-    TELEPORTERS = freshTeleporters;
 
     if (!llGetListLength(buttons))
     {
@@ -129,9 +122,6 @@ integer performTeleport()
     if (llGetListLength(d) != 1)
     {
         llOwnerSay("Teleport failed: destination not found.");
-        pendingDest = NULL_KEY;
-        teleportingAvatar = NULL_KEY;
-        awaitingUnsit = FALSE;
         return FALSE;
     }
 
