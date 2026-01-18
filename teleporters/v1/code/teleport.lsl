@@ -4,7 +4,7 @@
 // ======================================================
 
 string REQUIRED_DESC = "*Rockstar Ranch* Teleporter";
-integer DEBUG = TRUE;
+integer DEBUG = FALSE;
 
 // Shared channel
 integer CHANNEL;
@@ -70,7 +70,6 @@ integer broadcast()
         CHANNEL,
         "REG|" + llGetObjectName() + "|" + (string)llGetKey()
     );
-    debugLog("Broadcast registry ping.");
     return TRUE;
 }
 
@@ -81,7 +80,6 @@ integer sendReg(key target)
         CHANNEL,
         "REG|" + llGetObjectName() + "|" + (string)llGetKey()
     );
-    debugLog("Sent REG to " + (string)target);
     return TRUE;
 }
 
@@ -106,9 +104,6 @@ integer showMenu(key id)
         buttons += [label];
         lines += [label + ". " + base];
     }
-
-    debugLog("Menu built with " + (string)llGetListLength(buttons) +
-        " entries from " + (string)(total / STRIDE) + " registered teleporters.");
 
     if (!llGetListLength(buttons))
     {
@@ -150,8 +145,6 @@ integer performTeleport()
         awaitingUnsit = FALSE;
         return FALSE;
     }
-
-    debugLog("Teleporting to " + (string)pendingDest + " at " + (string)llList2Vector(d, 0));
 
     llTeleportAgent(
         teleportingAvatar,
@@ -228,11 +221,9 @@ default
         if (idx != -1)
         {
             key target = llList2Key(MENU_MAP, idx + 1);
-            debugLog("Selection " + msg + " maps to " + (string)target);
             if (llGetListLength(llGetObjectDetails(target, [OBJECT_POS])) != 1)
             {
                 llOwnerSay("Destination unavailable. Rebuilding menu.");
-                debugLog("Selection invalid. Destination missing: " + (string)target);
                 pendingDest = NULL_KEY;
                 MENU_MAP = [];
                 showMenu(id);
@@ -253,14 +244,12 @@ default
             {
                 sitter = current;
                 MENU_MAP = [];
-                debugLog("Avatar sat: " + (string)sitter);
                 broadcast();
                 showMenu(sitter);
             }
             else
             {
                 sitter = NULL_KEY;
-                debugLog("Avatar unsat.");
                 if (awaitingUnsit)
                     performTeleport();
                 else
@@ -276,7 +265,6 @@ default
 
         teleportingAvatar = sitter;
         awaitingUnsit = TRUE;
-        debugLog("Permissions granted. Unsitting before teleport.");
         llUnSit(sitter);
     }
 }
