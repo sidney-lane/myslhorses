@@ -4,7 +4,49 @@ This file documents observed errors, verified root causes, and hardened fixes pe
 requirements in `teleporters/v1/README.md`. It also includes an audit of the scripts for
 compliance and potential risks.
 
+Last updated to restore documentation after an accidental revert.
+
 ## Error Log
+
+## Operator Notes (Verbatim)
+
+Causes:
+1,2,4,5 are not the issue. However, you should have a local owner only / channel output for all functions that may cause the error so it can be correctly verified and debugged. (NOT FOR SENSOR CONNECTIONS - that crashed the sim)
+
+Functions
+Use a debug to VERIFY ONCE only on avatar sit.
+
+Menu
+Not an issue, however menu's can easily e paginated
+
+Teleportation
+Debug logs to verify if any of these are the cause in a channel/to creator/owner. ONCE ONLY - dont crash the sim
+
+Instructions:
+1. Add all of this response, verbatim to the ERRORS.md file
+2. Add the MINIMAL debug logs so we can pinpoint where the error is occurring
+3. REWRITE THE SCRIPT to ensure what can be avoided does not occur
+4. If a re-architecture is required for functionality - explicitly write the tradeoffs needed for core functionality up
+
+---
+
+### Error: “NAME NOT DEFINED IN SCOPE”
+**Observed behavior**
+* Script fails to compile with a basic LSL syntax error indicating a missing identifier.
+
+**Verified causes**
+1. **Undefined constant or variable referenced before declaration** in the script.
+2. **Typos or renamed identifiers** left stale in the code after edits.
+
+**Corrective actions**
+* Declare all constants and helpers before they are used.
+* Run the script through the LSL compiler before deploying to ensure all identifiers exist.
+
+**How to overcome**
+* Fix the missing declaration or typo and recompile. This is a hard compile error and
+  prevents the script from running at all.
+
+---
 
 ### Error: Only found one teleporter
 **Observed behavior**
@@ -26,6 +68,26 @@ compliance and potential risks.
 **How to overcome**
 * Ensure all teleporters share the exact description and are running the script, then sit
   and wait for the list to converge (the system now rebroadcasts periodically and on sit).
+
+---
+
+### Error: “Destination unavailable / location not found”
+**Observed behavior**
+* Teleport fails or the menu rebuilds with “Destination unavailable.”
+
+**Verified causes**
+1. **Destination object was deleted/moved across regions** between menu display and
+   selection, causing `llGetObjectDetails(..., [OBJECT_POS])` to return an empty list.
+2. **Stale registry entry** from a teleporter that no longer exists in the region.
+
+**Corrective actions**
+* Validate the destination key **at selection time** and rebuild the menu if the
+  destination is missing.
+* Keep periodic handshake broadcasts so the registry converges again after changes.
+
+**How to overcome**
+* Re-open the menu after the system rebroadcasts. If the destination is still missing,
+  rez or restart the missing teleporter so it re-registers.
 
 ---
 
@@ -73,3 +135,9 @@ compliance and potential risks.
   grouping (explicitly out of scope per README).
 * Teleport can still fail if a destination is deleted between menu display and selection;
   the scripts now detect this and rebuild the menu.
+
+## Re-architecture Tradeoffs (If Needed)
+* Adding pagination would prevent exceeding `llDialog` limits but requires additional
+  state, more dialogs, and repeated user interactions (slower UX).
+* Adding retry delays after unsit may reduce timing-related teleport failures but can make
+  teleports feel sluggish and still requires permission handling to remain deterministic.
