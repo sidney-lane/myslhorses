@@ -216,6 +216,7 @@ default
 
         llSetTimerEvent(TIMER_INTERVAL);
         broadcast();
+        debugLog("Initialized on channel " + (string)CHANNEL);
     }
 
     on_rez(integer p) { llResetScript(); }
