@@ -2,7 +2,7 @@ BELOW ARE SUGGESTED WAYS TO TEST LSL SCRIPTS FOR LOGIC AND SYNTAX ERRORS
 
 ---
 
-What follows is **the actual state of the world for automated LSL testing and verification**, verified against Linden Lab tooling, community-maintained compilers, and simulator behavior. There is **no hidden magic solution**—only workable engineering patterns.
+What follows is **a state of the world for automated LSL testing and verification**, verified against Linden Lab tooling, community-maintained compilers, and simulator behavior. There is **no hidden magic solution**—only workable engineering patterns.
 
 ---
 
@@ -227,17 +227,15 @@ Not elegant. But proven.
 
 * ✅ You **can** automate syntax + compilation
 * ⚠️ You can **partially** automate runtime
-* ❌ You **cannot** fully automate LSL behavior verification in SL
-* ❌ There is **no hidden framework** you missed
-
-Anyone claiming otherwise is lying or confusing OpenSim with SL.
+* ❌ You **cannot** fully automate LSL behavior verification in SL (TO VERIFY - eg. bot testing)
+* ❌ There is **no hidden framework** you missed (TO VERIFY)
 
 ---
 
-If you want next (and I won’t loop you):
+Potential next steps (NON CONCLUSIVE, NON-DEFINITIVE):
 
 * A **concrete macOS Hammerspoon + Firestorm automation recipe**
 * A **minimal in-world LSL test harness template**
 * A **OpenSim-based CI layout**
 
-Say one.
+
