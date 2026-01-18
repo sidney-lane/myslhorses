@@ -54,13 +54,13 @@ A prim participates in the teleporter network **if and only if**:
 * On sit:
 
   * A menu appears immediately.
-  * All destinations are shown at once.
   * No extra “Teleport” confirmation step.
 * Menu must:
 
-  * Show *all* teleporters
-  * Handle duplicate names safely
-  * Avoid button truncation or ambiguity
+  * Show all teleporters with **human-readable destination names**.
+  * Handle duplicate names safely.
+  * Avoid button truncation or ambiguity.
+  * Support pagination when more than 12 buttons are required.
 
 ---
 
@@ -158,7 +158,8 @@ Correct behavior:
 * No stable ordering guarantees
 
 **Implication**:
-Menus must **not rely on string matching or index inference** to map back to teleporters.
+Menus must avoid truncation ambiguity and rely on a stable mapping between button labels
+and teleporter keys, with pagination when necessary.
 
 **Reference**:
 [https://wiki.secondlife.com/wiki/LlDialog](https://wiki.secondlife.com/wiki/LlDialog)

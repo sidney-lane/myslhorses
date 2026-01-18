@@ -8,6 +8,28 @@ Last updated to restore documentation after an accidental revert.
 
 ## Error Log
 
+## Operator Notes (Verbatim)
+
+Causes:
+1,2,4,5 are not the issue. However, you should have a local owner only / channel output for all functions that may cause the error so it can be correctly verified and debugged. (NOT FOR SENSOR CONNECTIONS - that crashed the sim)
+
+Functions
+Use a debug to VERIFY ONCE only on avatar sit.
+
+Menu
+Not an issue, however menu's can easily e paginated
+
+Teleportation
+Debug logs to verify if any of these are the cause in a channel/to creator/owner. ONCE ONLY - dont crash the sim
+
+Instructions:
+1. Add all of this response, verbatim to the ERRORS.md file
+2. Add the MINIMAL debug logs so we can pinpoint where the error is occurring
+3. REWRITE THE SCRIPT to ensure what can be avoided does not occur
+4. If a re-architecture is required for functionality - explicitly write the tradeoffs needed for core functionality up
+
+---
+
 ### Error: “NAME NOT DEFINED IN SCOPE”
 **Observed behavior**
 * Script fails to compile with a basic LSL syntax error indicating a missing identifier.
@@ -113,3 +135,9 @@ Last updated to restore documentation after an accidental revert.
   grouping (explicitly out of scope per README).
 * Teleport can still fail if a destination is deleted between menu display and selection;
   the scripts now detect this and rebuild the menu.
+
+## Re-architecture Tradeoffs (If Needed)
+* Adding pagination would prevent exceeding `llDialog` limits but requires additional
+  state, more dialogs, and repeated user interactions (slower UX).
+* Adding retry delays after unsit may reduce timing-related teleport failures but can make
+  teleports feel sluggish and still requires permission handling to remain deterministic.

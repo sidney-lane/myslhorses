@@ -4,7 +4,8 @@
 // ======================================================
 
 string REQUIRED_DESC = "*Rockstar Ranch* Teleporter";
-integer DEBUG = FALSE;
+integer DEBUG = TRUE;
+integer DEBUG_CHANNEL = -777777;
 
 // Shared channel
 integer CHANNEL;
@@ -15,6 +16,8 @@ list TELEPORTERS;
 integer STRIDE = 2;
 
 list MENU_MAP; // [button_label, object_key]
+integer MENU_PAGE = 0;
+integer PAGE_SIZE = 10;
 
 key sitter = NULL_KEY;
 key pendingDest = NULL_KEY;
@@ -23,11 +26,22 @@ integer awaitingUnsit = FALSE;
 float BROADCAST_INTERVAL = 5.0;
 float TIMER_INTERVAL = 1.0;
 float lastBroadcast = 0.0;
+key lastDebugSitter = NULL_KEY;
 
 integer debugLog(string message)
 {
     if (DEBUG)
-        llOwnerSay("[Teleporter] " + message);
+        llRegionSayTo(llGetOwner(), DEBUG_CHANNEL, "[Teleporter] " + message);
+    return TRUE;
+}
+
+integer debugOnce(key av, string message)
+{
+    if (DEBUG && av != NULL_KEY && av != lastDebugSitter)
+    {
+        llRegionSayTo(llGetOwner(), DEBUG_CHANNEL, "[Teleporter] " + message);
+        lastDebugSitter = av;
+    }
     return TRUE;
 }
 
@@ -56,7 +70,6 @@ integer addTeleporter(key k, string name)
     if (indexByKey(k) == -1)
     {
         TELEPORTERS += [k, name];
-        debugLog("Registered teleporter: " + name + " (" + (string)k + ")");
     }
     return TRUE;
 }
@@ -92,17 +105,23 @@ integer showMenu(key id)
     list lines = [];
     integer i;
     integer total = llGetListLength(TELEPORTERS);
+    integer totalPages = (total + (STRIDE * PAGE_SIZE) - 1) / (STRIDE * PAGE_SIZE);
+    integer start = MENU_PAGE * STRIDE * PAGE_SIZE;
+    integer end = start + (STRIDE * PAGE_SIZE);
 
-    for (i = 0; i < total; i += STRIDE)
+    if (totalPages < 1)
+        totalPages = 1;
+
+    for (i = start; i < total && i < end; i += STRIDE)
     {
         key k = llList2Key(TELEPORTERS, i);
         string base = llList2String(TELEPORTERS, i + 1);
-        integer number = llGetListLength(buttons) + 1;
-        string label = (string)number;
+        string label = base;
+        if (llStringLength(label) > 23)
+            label = llGetSubString(label, 0, 23);
 
         MENU_MAP += [label, k];
         buttons += [label];
-        lines += [label + ". " + base];
     }
 
     if (!llGetListLength(buttons))
@@ -111,10 +130,12 @@ integer showMenu(key id)
         return FALSE;
     }
 
-    if (llGetListLength(buttons) > 12)
+    if (totalPages > 1)
     {
-        llOwnerSay("Too many teleporters for a single menu (max 12).");
-        return FALSE;
+        buttons += ["Prev", "Next"];
+        lines += [
+            "Page " + (string)(MENU_PAGE + 1) + " of " + (string)totalPages
+        ];
     }
 
     llDialog(
@@ -132,19 +153,31 @@ integer performTeleport()
     if (teleportingAvatar == NULL_KEY || pendingDest == NULL_KEY)
         return FALSE;
 
-    if (llAvatarOnSitTarget() == teleportingAvatar)
+    if (llGetAgentSize(teleportingAvatar) == ZERO_VECTOR)
+        return FALSE;
+
+    if (llGetAgentInfo(teleportingAvatar) & AGENT_SITTING)
         return FALSE;
 
     list d = llGetObjectDetails(pendingDest, [OBJECT_POS]);
     if (llGetListLength(d) != 1)
     {
         llOwnerSay("Teleport failed: destination not found.");
-        debugLog("Teleport failed. Destination key not found: " + (string)pendingDest);
+        debugOnce(
+            teleportingAvatar,
+            "Teleport failed. Destination key not found: " + (string)pendingDest
+        );
         pendingDest = NULL_KEY;
         teleportingAvatar = NULL_KEY;
         awaitingUnsit = FALSE;
         return FALSE;
     }
+
+    debugOnce(
+        teleportingAvatar,
+        "Teleport target key " + (string)pendingDest +
+            " at " + (string)llList2Vector(d, 0)
+    );
 
     llTeleportAgent(
         teleportingAvatar,
@@ -218,6 +251,21 @@ default
         if (id != sitter) return;
 
         integer idx = llListFindList(MENU_MAP, [msg]);
+        if (msg == "Next")
+        {
+            MENU_PAGE += 1;
+            MENU_MAP = [];
+            showMenu(id);
+            return;
+        }
+        if (msg == "Prev")
+        {
+            if (MENU_PAGE > 0)
+                MENU_PAGE -= 1;
+            MENU_MAP = [];
+            showMenu(id);
+            return;
+        }
         if (idx != -1)
         {
             key target = llList2Key(MENU_MAP, idx + 1);
@@ -244,6 +292,12 @@ default
             {
                 sitter = current;
                 MENU_MAP = [];
+                MENU_PAGE = 0;
+                debugOnce(
+                    sitter,
+                    "Avatar sat. Region=" + llGetRegionName() +
+                        " Channel=" + (string)CHANNEL
+                );
                 broadcast();
                 showMenu(sitter);
             }
