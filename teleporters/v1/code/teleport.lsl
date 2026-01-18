@@ -13,8 +13,13 @@ integer LISTEN;
 list TELEPORTERS;
 integer STRIDE = 2;
 
+list MENU_MAP; // [button_label, object_key]
+integer MENU_STRIDE = 2;
+
 key sitter = NULL_KEY;
 key pendingDest = NULL_KEY;
+key teleportingAvatar = NULL_KEY;
+integer awaitingUnsit = FALSE;
 
 // ------------------------------------------------------
 integer deriveChannel()
@@ -36,86 +41,101 @@ integer indexByKey(key k)
     return -1;
 }
 
-addTeleporter(key k, string name)
+integer addTeleporter(key k, string name)
 {
     if (indexByKey(k) == -1)
         TELEPORTERS += [k, name];
+    return TRUE;
 }
 
 // ------------------------------------------------------
 // Discovery (handshake, convergent)
 // ------------------------------------------------------
-broadcast()
+integer broadcast()
 {
     llRegionSay(
         CHANNEL,
         "REG|" + llGetObjectName() + "|" + (string)llGetKey()
     );
+    return TRUE;
 }
 
-sendReg(key target)
+integer sendReg(key target)
 {
     llRegionSayTo(
         target,
         CHANNEL,
         "REG|" + llGetObjectName() + "|" + (string)llGetKey()
     );
+    return TRUE;
 }
 
 // ------------------------------------------------------
 // Build menu with embedded keys
 // ------------------------------------------------------
-list buildMenu()
+integer showMenu(key id)
 {
-    list menu = [];
-    list counts = [];
+    list buttons = [];
+    list lines = [];
     integer i;
 
     for (i = 0; i < llGetListLength(TELEPORTERS); i += STRIDE)
     {
         key k = llList2Key(TELEPORTERS, i);
         string base = llList2String(TELEPORTERS, i + 1);
+        integer number = (i / STRIDE) + 1;
+        string label = (string)number;
 
-        integer idx = llListFindList(counts, [base]);
-        string label;
-
-        if (idx == -1)
-        {
-            counts += [base, 1];
-            label = base;
-        }
-        else
-        {
-            integer n = llList2Integer(counts, idx + 1) + 1;
-            counts = llListReplaceList(counts, [n], idx + 1, idx + 1);
-            label = base + " (" + (string)n + ")";
-        }
-
-        menu += [label + "|" + (string)k];
-    }
-    return menu;
-}
-
-// ------------------------------------------------------
-showMenu(key id)
-{
-    list raw = buildMenu();
-    list buttons = [];
-    integer i;
-
-    for (i = 0; i < llGetListLength(raw); ++i)
-    {
-        string e = llList2String(raw, i);
-        buttons += llGetSubString(e, 0, llSubStringIndex(e, "|") - 1);
+        MENU_MAP += [label, k];
+        buttons += [label];
+        lines += [label + ". " + base];
     }
 
     if (!llGetListLength(buttons))
     {
         llOwnerSay("No other teleporters found.");
-        return;
+        return FALSE;
     }
 
-    llDialog(id, "Teleport to:", buttons, CHANNEL);
+    if (llGetListLength(buttons) > 12)
+    {
+        llOwnerSay("Too many teleporters for a single menu (max 12).");
+        return FALSE;
+    }
+
+    llDialog(
+        id,
+        "Teleport destinations:\n" + llDumpList2String(lines, "\n"),
+        buttons,
+        CHANNEL
+    );
+    return TRUE;
+}
+
+// ------------------------------------------------------
+integer performTeleport()
+{
+    if (teleportingAvatar == NULL_KEY || pendingDest == NULL_KEY)
+        return FALSE;
+
+    list d = llGetObjectDetails(pendingDest, [OBJECT_POS]);
+    if (llGetListLength(d) != 1)
+    {
+        llOwnerSay("Teleport failed: destination not found.");
+        return FALSE;
+    }
+
+    llTeleportAgent(
+        teleportingAvatar,
+        llGetRegionName(),
+        llList2Vector(d, 0),
+        ZERO_VECTOR
+    );
+
+    pendingDest = NULL_KEY;
+    teleportingAvatar = NULL_KEY;
+    awaitingUnsit = FALSE;
+    return TRUE;
 }
 
 // ------------------------------------------------------
@@ -128,7 +148,10 @@ default
 
         CHANNEL = deriveChannel();
         TELEPORTERS = [];
+        MENU_MAP = [];
         pendingDest = NULL_KEY;
+        teleportingAvatar = NULL_KEY;
+        awaitingUnsit = FALSE;
 
         llListenRemove(LISTEN);
         LISTEN = llListen(CHANNEL, "", NULL_KEY, "");
@@ -162,21 +185,11 @@ default
         if (id != sitter) return;
 
         // Menu selection → key
-        list menu = buildMenu();
-        integer i;
-        for (i = 0; i < llGetListLength(menu); ++i)
+        integer idx = llListFindList(MENU_MAP, [msg]);
+        if (idx != -1)
         {
-            string e = llList2String(menu, i);
-            if (llGetSubString(e, 0, llSubStringIndex(e, "|") - 1) == msg)
-            {
-                pendingDest = (key)llGetSubString(
-                    e,
-                    llSubStringIndex(e, "|") + 1,
-                    -1
-                );
-                llRequestPermissions(id, PERMISSION_TELEPORT);
-                return;
-            }
+            pendingDest = llList2Key(MENU_MAP, idx + 1);
+            llRequestPermissions(id, PERMISSION_TELEPORT);
         }
     }
 
@@ -184,11 +197,21 @@ default
     {
         if (c & CHANGED_LINK)
         {
-            sitter = llAvatarOnSitTarget();
-            if (sitter != NULL_KEY)
+            key current = llAvatarOnSitTarget();
+            if (current != NULL_KEY)
+            {
+                sitter = current;
+                MENU_MAP = [];
                 showMenu(sitter);
+            }
             else
-                pendingDest = NULL_KEY;
+            {
+                sitter = NULL_KEY;
+                if (awaitingUnsit)
+                    performTeleport();
+                else
+                    pendingDest = NULL_KEY;
+            }
         }
     }
 
@@ -197,19 +220,8 @@ default
         if (!(perms & PERMISSION_TELEPORT)) return;
         if (sitter == NULL_KEY || pendingDest == NULL_KEY) return;
 
-        // LIVE destination verification (same region)
-        list d = llGetObjectDetails(pendingDest, [OBJECT_POS]);
-        if (llGetListLength(d) != 1)
-        {
-            llOwnerSay("Teleport failed: destination not found.");
-            return;
-        }
-
-        llTeleportAgent(
-            sitter,
-            llGetRegionName(),
-            llList2Vector(d, 0),
-            ZERO_VECTOR
-        );
+        teleportingAvatar = sitter;
+        awaitingUnsit = TRUE;
+        llUnSit(sitter);
     }
 }
