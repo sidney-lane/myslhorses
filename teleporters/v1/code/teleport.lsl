@@ -4,6 +4,8 @@
 // ======================================================
 
 string REQUIRED_DESC = "*Rockstar Ranch* Teleporter";
+integer DEBUG = TRUE;
+integer OWNER_DEBUG_CHANNEL;
 
 // Shared channel
 integer CHANNEL;
@@ -13,8 +15,35 @@ integer LISTEN;
 list TELEPORTERS;
 integer STRIDE = 2;
 
+list MENU_MAP; // [button_label, object_key]
+integer MENU_PAGE = 0;
+integer PAGE_SIZE = 10;
+
 key sitter = NULL_KEY;
 key pendingDest = NULL_KEY;
+key teleportingAvatar = NULL_KEY;
+integer awaitingUnsit = FALSE;
+float BROADCAST_INTERVAL = 5.0;
+float TIMER_INTERVAL = 1.0;
+float lastBroadcast = 0.0;
+key lastDebugSitter = NULL_KEY;
+
+integer debugLog(string message)
+{
+    if (DEBUG)
+        llRegionSayTo(llGetOwner(), OWNER_DEBUG_CHANNEL, "[Teleporter] " + message);
+    return TRUE;
+}
+
+integer debugOnce(key av, string message)
+{
+    if (DEBUG && av != NULL_KEY && av != lastDebugSitter)
+    {
+        llRegionSayTo(llGetOwner(), OWNER_DEBUG_CHANNEL, "[Teleporter] " + message);
+        lastDebugSitter = av;
+    }
+    return TRUE;
+}
 
 // ------------------------------------------------------
 integer deriveChannel()
@@ -36,86 +65,131 @@ integer indexByKey(key k)
     return -1;
 }
 
-addTeleporter(key k, string name)
+integer addTeleporter(key k, string name)
 {
     if (indexByKey(k) == -1)
+    {
         TELEPORTERS += [k, name];
+    }
+    return TRUE;
 }
 
 // ------------------------------------------------------
 // Discovery (handshake, convergent)
 // ------------------------------------------------------
-broadcast()
+integer broadcast()
 {
     llRegionSay(
         CHANNEL,
         "REG|" + llGetObjectName() + "|" + (string)llGetKey()
     );
+    return TRUE;
 }
 
-sendReg(key target)
+integer sendReg(key target)
 {
     llRegionSayTo(
         target,
         CHANNEL,
         "REG|" + llGetObjectName() + "|" + (string)llGetKey()
     );
+    return TRUE;
 }
 
 // ------------------------------------------------------
 // Build menu with embedded keys
 // ------------------------------------------------------
-list buildMenu()
+integer showMenu(key id)
 {
-    list menu = [];
-    list counts = [];
+    list buttons = [];
+    list lines = [];
     integer i;
+    integer total = llGetListLength(TELEPORTERS);
+    integer totalPages = (total + (STRIDE * PAGE_SIZE) - 1) / (STRIDE * PAGE_SIZE);
+    integer start = MENU_PAGE * STRIDE * PAGE_SIZE;
+    integer end = start + (STRIDE * PAGE_SIZE);
 
-    for (i = 0; i < llGetListLength(TELEPORTERS); i += STRIDE)
+    if (totalPages < 1)
+        totalPages = 1;
+
+    for (i = start; i < total && i < end; i += STRIDE)
     {
         key k = llList2Key(TELEPORTERS, i);
         string base = llList2String(TELEPORTERS, i + 1);
+        string label = base;
+        if (llStringLength(label) > 23)
+            label = llGetSubString(label, 0, 23);
 
-        integer idx = llListFindList(counts, [base]);
-        string label;
-
-        if (idx == -1)
-        {
-            counts += [base, 1];
-            label = base;
-        }
-        else
-        {
-            integer n = llList2Integer(counts, idx + 1) + 1;
-            counts = llListReplaceList(counts, [n], idx + 1, idx + 1);
-            label = base + " (" + (string)n + ")";
-        }
-
-        menu += [label + "|" + (string)k];
-    }
-    return menu;
-}
-
-// ------------------------------------------------------
-showMenu(key id)
-{
-    list raw = buildMenu();
-    list buttons = [];
-    integer i;
-
-    for (i = 0; i < llGetListLength(raw); ++i)
-    {
-        string e = llList2String(raw, i);
-        buttons += llGetSubString(e, 0, llSubStringIndex(e, "|") - 1);
+        MENU_MAP += [label, k];
+        buttons += [label];
     }
 
     if (!llGetListLength(buttons))
     {
         llOwnerSay("No other teleporters found.");
-        return;
+        return FALSE;
     }
 
-    llDialog(id, "Teleport to:", buttons, CHANNEL);
+    if (totalPages > 1)
+    {
+        buttons += ["Prev", "Next"];
+        lines += [
+            "Page " + (string)(MENU_PAGE + 1) + " of " + (string)totalPages
+        ];
+    }
+
+    llDialog(
+        id,
+        "Teleport destinations:\n" + llDumpList2String(lines, "\n"),
+        buttons,
+        CHANNEL
+    );
+    return TRUE;
+}
+
+// ------------------------------------------------------
+integer performTeleport()
+{
+    if (teleportingAvatar == NULL_KEY || pendingDest == NULL_KEY)
+        return FALSE;
+
+    if (llGetAgentSize(teleportingAvatar) == ZERO_VECTOR)
+        return FALSE;
+
+    if (llGetAgentInfo(teleportingAvatar) & AGENT_SITTING)
+        return FALSE;
+
+    list d = llGetObjectDetails(pendingDest, [OBJECT_POS]);
+    if (llGetListLength(d) != 1)
+    {
+        llOwnerSay("Teleport failed: destination not found.");
+        debugOnce(
+            teleportingAvatar,
+            "Teleport failed. Destination key not found: " + (string)pendingDest
+        );
+        pendingDest = NULL_KEY;
+        teleportingAvatar = NULL_KEY;
+        awaitingUnsit = FALSE;
+        return FALSE;
+    }
+
+    debugOnce(
+        teleportingAvatar,
+        "Teleport target key " + (string)pendingDest +
+            " at " + (string)llList2Vector(d, 0)
+    );
+
+    llTeleportAgent(
+        teleportingAvatar,
+        "",
+        llList2Vector(d, 0),
+        ZERO_VECTOR
+    );
+
+    pendingDest = NULL_KEY;
+    teleportingAvatar = NULL_KEY;
+    awaitingUnsit = FALSE;
+    return TRUE;
 }
 
 // ------------------------------------------------------
@@ -127,21 +201,36 @@ default
             llOwnerSay("ERROR: Description must be exactly:\n" + REQUIRED_DESC);
 
         CHANNEL = deriveChannel();
+        OWNER_DEBUG_CHANNEL = (integer)"-777777";
         TELEPORTERS = [];
+        MENU_MAP = [];
         pendingDest = NULL_KEY;
+        teleportingAvatar = NULL_KEY;
+        awaitingUnsit = FALSE;
+        lastBroadcast = llGetTime();
 
         llListenRemove(LISTEN);
         LISTEN = llListen(CHANNEL, "", NULL_KEY, "");
 
         llSitTarget(<0.0, 0.0, 0.01>, ZERO_ROTATION);
 
-        llSetTimerEvent(5.0);
+        llSetTimerEvent(TIMER_INTERVAL);
         broadcast();
     }
 
     on_rez(integer p) { llResetScript(); }
 
-    timer() { broadcast(); }
+    timer()
+    {
+        if ((llGetTime() - lastBroadcast) >= BROADCAST_INTERVAL)
+        {
+            broadcast();
+            lastBroadcast = llGetTime();
+        }
+
+        if (awaitingUnsit)
+            performTeleport();
+    }
 
     listen(integer c, string n, key id, string msg)
     {
@@ -161,22 +250,36 @@ default
 
         if (id != sitter) return;
 
-        // Menu selection → key
-        list menu = buildMenu();
-        integer i;
-        for (i = 0; i < llGetListLength(menu); ++i)
+        integer idx = llListFindList(MENU_MAP, [msg]);
+        if (msg == "Next")
         {
-            string e = llList2String(menu, i);
-            if (llGetSubString(e, 0, llSubStringIndex(e, "|") - 1) == msg)
+            MENU_PAGE += 1;
+            MENU_MAP = [];
+            showMenu(id);
+            return;
+        }
+        if (msg == "Prev")
+        {
+            if (MENU_PAGE > 0)
+                MENU_PAGE -= 1;
+            MENU_MAP = [];
+            showMenu(id);
+            return;
+        }
+        if (idx != -1)
+        {
+            key target = llList2Key(MENU_MAP, idx + 1);
+            if (llGetListLength(llGetObjectDetails(target, [OBJECT_POS])) != 1)
             {
-                pendingDest = (key)llGetSubString(
-                    e,
-                    llSubStringIndex(e, "|") + 1,
-                    -1
-                );
-                llRequestPermissions(id, PERMISSION_TELEPORT);
+                llOwnerSay("Destination unavailable. Rebuilding menu.");
+                pendingDest = NULL_KEY;
+                MENU_MAP = [];
+                showMenu(id);
                 return;
             }
+
+            pendingDest = target;
+            llRequestPermissions(id, PERMISSION_TELEPORT);
         }
     }
 
@@ -184,11 +287,28 @@ default
     {
         if (c & CHANGED_LINK)
         {
-            sitter = llAvatarOnSitTarget();
-            if (sitter != NULL_KEY)
+            key current = llAvatarOnSitTarget();
+            if (current != NULL_KEY)
+            {
+                sitter = current;
+                MENU_MAP = [];
+                MENU_PAGE = 0;
+                debugOnce(
+                    sitter,
+                    "Avatar sat. Region=" + llGetRegionName() +
+                        " Channel=" + (string)CHANNEL
+                );
+                broadcast();
                 showMenu(sitter);
+            }
             else
-                pendingDest = NULL_KEY;
+            {
+                sitter = NULL_KEY;
+                if (awaitingUnsit)
+                    performTeleport();
+                else
+                    pendingDest = NULL_KEY;
+            }
         }
     }
 
@@ -197,19 +317,8 @@ default
         if (!(perms & PERMISSION_TELEPORT)) return;
         if (sitter == NULL_KEY || pendingDest == NULL_KEY) return;
 
-        // LIVE destination verification (same region)
-        list d = llGetObjectDetails(pendingDest, [OBJECT_POS]);
-        if (llGetListLength(d) != 1)
-        {
-            llOwnerSay("Teleport failed: destination not found.");
-            return;
-        }
-
-        llTeleportAgent(
-            sitter,
-            llGetRegionName(),
-            llList2Vector(d, 0),
-            ZERO_VECTOR
-        );
+        teleportingAvatar = sitter;
+        awaitingUnsit = TRUE;
+        llUnSit(sitter);
     }
 }
