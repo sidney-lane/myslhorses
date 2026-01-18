@@ -4,7 +4,27 @@ This file documents observed errors, verified root causes, and hardened fixes pe
 requirements in `teleporters/v1/README.md`. It also includes an audit of the scripts for
 compliance and potential risks.
 
+Last updated to restore documentation after an accidental revert.
+
 ## Error Log
+
+### Error: “NAME NOT DEFINED IN SCOPE”
+**Observed behavior**
+* Script fails to compile with a basic LSL syntax error indicating a missing identifier.
+
+**Verified causes**
+1. **Undefined constant or variable referenced before declaration** in the script.
+2. **Typos or renamed identifiers** left stale in the code after edits.
+
+**Corrective actions**
+* Declare all constants and helpers before they are used.
+* Run the script through the LSL compiler before deploying to ensure all identifiers exist.
+
+**How to overcome**
+* Fix the missing declaration or typo and recompile. This is a hard compile error and
+  prevents the script from running at all.
+
+---
 
 ### Error: Only found one teleporter
 **Observed behavior**
@@ -26,6 +46,26 @@ compliance and potential risks.
 **How to overcome**
 * Ensure all teleporters share the exact description and are running the script, then sit
   and wait for the list to converge (the system now rebroadcasts periodically and on sit).
+
+---
+
+### Error: “Destination unavailable / location not found”
+**Observed behavior**
+* Teleport fails or the menu rebuilds with “Destination unavailable.”
+
+**Verified causes**
+1. **Destination object was deleted/moved across regions** between menu display and
+   selection, causing `llGetObjectDetails(..., [OBJECT_POS])` to return an empty list.
+2. **Stale registry entry** from a teleporter that no longer exists in the region.
+
+**Corrective actions**
+* Validate the destination key **at selection time** and rebuild the menu if the
+  destination is missing.
+* Keep periodic handshake broadcasts so the registry converges again after changes.
+
+**How to overcome**
+* Re-open the menu after the system rebroadcasts. If the destination is still missing,
+  rez or restart the missing teleporter so it re-registers.
 
 ---
 
