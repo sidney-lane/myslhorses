@@ -8,23 +8,29 @@ These ojects will be derezzed (killed) once the user selects "Rez" to rez horses
 Formations (6 horses)
 1. Star
 M   M   M
+
     S
+   
 M      M
 
-2. T
+3. T
 M  M  M  M
+
     SM
 
-3. Triangle
+5. Triangle
 M  M  M
+
  M  M
+ 
    S
 
-4. Line
+7. Line
 M  M  SM  M  M
 
-5. Up/Down
+8. Up/Down
 Up: M  M  M  M
+
 Down: SM
 
 
