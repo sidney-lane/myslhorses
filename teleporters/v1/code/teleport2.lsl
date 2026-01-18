@@ -151,13 +151,23 @@ default
 
         llSitTarget(<0,0,0.01>, ZERO_ROTATION);
 
-        llSetTimerEvent(5.0);
+        llSetTimerEvent(TIMER_INTERVAL);
         broadcast();
     }
 
     on_rez(integer p) { llResetScript(); }
 
-    timer() { broadcast(); }
+    timer()
+    {
+        if ((llGetTime() - lastBroadcast) >= BROADCAST_INTERVAL)
+        {
+            broadcast();
+            lastBroadcast = llGetTime();
+        }
+
+        if (awaitingUnsit)
+            performTeleport();
+    }
 
     listen(integer c, string n, key id, string msg)
     {
