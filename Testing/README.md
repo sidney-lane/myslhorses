@@ -241,3 +241,18 @@ If you want next (and I won’t loop you):
 * A **OpenSim-based CI layout**
 
 Say one.
+
+---
+
+# LSL Testing Suite (AI-ready assets)
+
+A structured suite (templates + harness scripts) that operationalizes the guidance above is available at:
+
+* `Testing/suite/README.md`
+
+This suite provides:
+
+* A staged test pipeline (static → viewer compile → runtime)
+* Reusable LSL assertion helpers
+* A runtime test controller example
+* An AI-friendly test plan template
