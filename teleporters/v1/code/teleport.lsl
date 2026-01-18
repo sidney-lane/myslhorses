@@ -5,7 +5,7 @@
 
 string REQUIRED_DESC = "*Rockstar Ranch* Teleporter";
 integer DEBUG = TRUE;
-integer DEBUG_CHANNEL = -777777;
+integer DEBUG_CHANNEL;
 
 // Shared channel
 integer CHANNEL;
@@ -201,6 +201,7 @@ default
             llOwnerSay("ERROR: Description must be exactly:\n" + REQUIRED_DESC);
 
         CHANNEL = deriveChannel();
+        DEBUG_CHANNEL = -777777;
         TELEPORTERS = [];
         MENU_MAP = [];
         pendingDest = NULL_KEY;
