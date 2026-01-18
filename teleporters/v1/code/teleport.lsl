@@ -4,6 +4,7 @@
 // ======================================================
 
 string REQUIRED_DESC = "*Rockstar Ranch* Teleporter";
+integer DEBUG = TRUE;
 
 // Shared channel
 integer CHANNEL;
@@ -44,6 +45,7 @@ integer indexByKey(key k)
 integer addTeleporter(key k, string name)
 {
     if (indexByKey(k) == -1)
+    {
         TELEPORTERS += [k, name];
     return TRUE;
 }
@@ -78,8 +80,9 @@ integer showMenu(key id)
     list buttons = [];
     list lines = [];
     integer i;
+    integer total = llGetListLength(TELEPORTERS);
 
-    for (i = 0; i < llGetListLength(TELEPORTERS); i += STRIDE)
+    for (i = 0; i < total; i += STRIDE)
     {
         key k = llList2Key(TELEPORTERS, i);
         string base = llList2String(TELEPORTERS, i + 1);
@@ -160,6 +163,7 @@ default
 
         llSetTimerEvent(TIMER_INTERVAL);
         broadcast();
+        debugLog("Initialized on channel " + (string)CHANNEL);
     }
 
     on_rez(integer p) { llResetScript(); }
