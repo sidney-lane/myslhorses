@@ -6,6 +6,43 @@ compliance and potential risks.
 
 Last updated to restore documentation after an accidental revert.
 
+## CONTINUAL TELEPORTER FAILURE:
+The error "Teleport failed: landmark name provided but asset is missing or invalid" occurs because of how you are calling the llTeleportAgent function.
+In LSL, the function llTeleportAgent has two "modes" based on the types of arguments passed. Your script is accidentally triggering the Landmark Mode instead of the Coordinate Mode.
+The Cause
+Look at your llTeleportAgent call:
+lsl
+llTeleportAgent(
+    teleportingAvatar,
+    llGetRegionName(),   // This is a STRING
+    llList2Vector(d, 0), // This is a VECTOR
+    ZERO_VECTOR          // This is a VECTOR
+);
+Use code with caution.
+
+While this looks correct, the LSL compiler and simulator often misinterpret this specific overload if the parameters aren't explicitly clear. When the second parameter is a string (the region name), the function expects the third parameter to be a landmark name (also a string) if it's going to a different region, or it gets confused by the local vector.
+The Fix
+To force the script to use Coordinate-based teleportation (which is what you want for a same-region teleporter), you should pass an empty string for the landmark parameter.
+Update your performTeleport() function to use this specific syntax:
+lsl
+// Replace your current llTeleportAgent call with this:
+llTeleportAgent(
+    teleportingAvatar, 
+    "",                   // Use an empty string to bypass landmark lookup
+    llList2Vector(d, 0),  // The destination vector
+    ZERO_VECTOR           // The look-at vector
+);
+Use code with caution.
+
+Why this works:
+Local Teleports: If you are teleporting within the same region, passing an empty string "" for the region/landmark parameter tells the simulator to use the provided vector as a local coordinate.
+Asset Check: By providing llGetRegionName(), the script was essentially telling the simulator: "Look for a Landmark asset named [Region Name] inside the object's inventory." Since there is no landmark with that exact name in the prim, it returns the "asset missing" error.
+One additional check:
+Ensure the script has Experience Permissions if you want the teleport to be seamless, or ensure the user is actually clicking "Allow" on the teleport request. However, the specific error you cited is almost always due to the string/landmark mismatch described above.
+
+
+
+
 ## Error Log
 
 ## Operator Notes (Verbatim)

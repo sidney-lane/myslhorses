@@ -315,6 +315,7 @@ default
 
         llSetTimerEvent(TIMER_INTERVAL);
         broadcast();
+        debugLog("Initialized on channel " + (string)CHANNEL);
     }
 
     on_rez(integer p) { llResetScript(); }
@@ -410,6 +411,9 @@ default
                 llSetScriptState(llGetScriptName(), TRUE);
                 return;
             }
+
+            pendingDest = target;
+            llRequestPermissions(id, PERMISSION_TELEPORT);
         }
 
         integer idx = llListFindList(MENU_MAP, [msg]);
