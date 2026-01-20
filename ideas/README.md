@@ -2,6 +2,9 @@
 
 ---
 
+## SIBLING SET ORGANISER 
+- detects when there is at least one breeding pair (male/female - not possible dammit) and changes color
+
 ## BUNDLE ORGANISER VENDOR
 
 Put your named bundles in.  
