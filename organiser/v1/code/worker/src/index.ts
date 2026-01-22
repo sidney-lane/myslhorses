@@ -1,44 +1,56 @@
+import type { KVNamespace } from '@cloudflare/workers-types';
+
 export interface Env {
   STATS_CACHE: KVNamespace;
 }
 
-const BUNDLE_URL = "https://amarettobreedables.com/bundleData.php?id=";
+const BUNDLE_URL = 'https://amarettobreedables.com/bundleData.php?id=';
 
-function extractSection(html: string, header: string): string {
-  const headerIndex = html.indexOf(header);
-  if (headerIndex === -1) return "";
-  const slice = html.slice(headerIndex);
-  const dataStart = slice.indexOf("<p class=\"dataOutput\">");
-  if (dataStart === -1) return "";
-  const dataSlice = slice.slice(dataStart);
-  const endIndex = dataSlice.indexOf("</p>");
-  if (endIndex === -1) return "";
-  return dataSlice.slice(0, endIndex);
-}
+// function extractSection(html: string, header: string): string {
+//   const headerIndex = html.indexOf(header);
+//   if (headerIndex === -1) return '';
+//   const slice = html.slice(headerIndex);
+//   const dataStart = slice.indexOf('<p class="dataOutput">');
+//   if (dataStart === -1) return '';
+//   const dataSlice = slice.slice(dataStart);
+//   const endIndex = dataSlice.indexOf('</p>');
+//   if (endIndex === -1) return '';
+//   return dataSlice.slice(0, endIndex);
+// }
 
 function extractField(section: string, label: string): string | null {
-  const regex = new RegExp(`${label}\\s*:\\s*([^<]+)<br`, "i");
+  const regex = new RegExp(`${label}\\s*:\\s*([\\s\\S]*?)<br>`, 'i');
   const match = section.match(regex);
   return match ? match[1].trim() : null;
 }
 
-function extractStats(html: string): { statsText: string; traits: Record<string, string> } {
+function extractBundleSection(html: string): string {
+  const match = html.match(
+    /<p class="dataOutputHead">\s*The Bundle<br>\s*<\/p>\s*<p class="dataOutput">\s*([\s\S]*?)\s*<\/p>/i,
+  );
+  return match ? match[1] : '';
+}
+
+function extractStats(html: string): {
+  statsText: string;
+  traits: Record<string, string>;
+} {
   const traits: Record<string, string> = {};
-  const bundleSection = extractSection(html, "The Bundle");
+  const bundleSection = extractBundleSection(html);
   if (!bundleSection) {
-    return { statsText: "", traits };
+    return { statsText: '', traits };
   }
 
-  const name = extractField(bundleSection, "Name");
-  const gender = extractField(bundleSection, "Gender");
-  const age = extractField(bundleSection, "Age");
-  const owner = extractField(bundleSection, "Current Owner");
-  const breed = extractField(bundleSection, "Breed");
-  const eye = extractField(bundleSection, "Eye");
-  const mane = extractField(bundleSection, "Mane");
-  const tail = extractField(bundleSection, "Tail");
-  const uuid = extractField(bundleSection, "UUID");
-  const version = extractField(bundleSection, "Version");
+  const name = extractField(bundleSection, 'Name');
+  const gender = extractField(bundleSection, 'Gender');
+  const age = extractField(bundleSection, 'Age');
+  const owner = extractField(bundleSection, 'Current Owner');
+  const breed = extractField(bundleSection, 'Breed');
+  const eye = extractField(bundleSection, 'Eye');
+  const mane = extractField(bundleSection, 'Mane');
+  const tail = extractField(bundleSection, 'Tail');
+  const uuid = extractField(bundleSection, 'UUID');
+  const version = extractField(bundleSection, 'Version');
 
   if (name) traits.name = name;
   if (gender) traits.gender = gender;
@@ -60,25 +72,63 @@ function extractStats(html: string): { statsText: string; traits: Record<string,
     version ? `Version: ${version}` : null,
   ]
     .filter(Boolean)
-    .join(" | ");
+    .join(' | ');
 
   return { statsText, traits };
 }
 
 async function handleIngest(request: Request, env: Env): Promise<Response> {
-  const body = await request.json();
+  let body: any;
+  try {
+    body = await request.json();
+  } catch {
+    return new Response(
+      JSON.stringify({ status: 'error', message: 'Invalid JSON body' }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
   const bundleUuid = body.bundle_uuid as string | undefined;
 
   if (!bundleUuid) {
-    return new Response(JSON.stringify({ status: "error", message: "bundle_uuid required" }), {
-      status: 400,
-      headers: { "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ status: 'error', message: 'bundle_uuid required' }),
+      {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      },
+    );
   }
 
   const res = await fetch(BUNDLE_URL + bundleUuid);
+  if (!res.ok) {
+    return new Response(
+      JSON.stringify({
+        status: 'error',
+        message: 'Failed to fetch bundle page',
+      }),
+      { status: 502, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
   const html = await res.text();
   const parsed = extractStats(html);
+
+  // 🔒 ADD THIS BLOCK (this is what was missing)
+  if (!Object.keys(parsed.traits).length) {
+    return new Response(
+      JSON.stringify({
+        status: 'error',
+        message: 'Bundle parsed but no traits found',
+      }),
+      {
+        status: 422,
+        headers: { 'Content-Type': 'application/json' },
+      },
+    );
+  }
+  // 🔒 END OF ADDITION
+  parsed.traits.__debug = 'INGEST_RAN_' + new Date().toISOString();
 
   await env.STATS_CACHE.put(
     bundleUuid,
@@ -87,32 +137,36 @@ async function handleIngest(request: Request, env: Env): Promise<Response> {
       stats_text: parsed.statsText,
       traits: parsed.traits,
       updated_at: new Date().toISOString(),
-    })
+    }),
+    { expirationTtl: 86400 },
   );
 
   return new Response(
     JSON.stringify({
-      status: "ok",
+      status: 'ok',
       bundle_uuid: bundleUuid,
       stats_ready: true,
     }),
     {
-      headers: { "Content-Type": "application/json" },
-    }
+      headers: { 'Content-Type': 'application/json' },
+    },
   );
 }
 
 async function handleStats(env: Env, bundleUuid: string): Promise<Response> {
-  const cached = await env.STATS_CACHE.get(bundleUuid, "text");
+  const cached = await env.STATS_CACHE.get(bundleUuid, 'text');
   if (!cached) {
-    return new Response(JSON.stringify({ status: "missing", bundle_uuid: bundleUuid }), {
-      status: 404,
-      headers: { "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ status: 'missing', bundle_uuid: bundleUuid }),
+      {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' },
+      },
+    );
   }
 
   return new Response(cached, {
-    headers: { "Content-Type": "application/json" },
+    headers: { 'Content-Type': 'application/json' },
   });
 }
 
@@ -120,15 +174,15 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
 
-    if (request.method === "POST" && url.pathname === "/api/ingest") {
+    if (request.method === 'POST' && url.pathname === '/api/ingest') {
       return handleIngest(request, env);
     }
 
     const statsMatch = url.pathname.match(/^\/api\/bundles\/([^/]+)\/stats$/);
-    if (request.method === "GET" && statsMatch) {
+    if (request.method === 'GET' && statsMatch) {
       return handleStats(env, statsMatch[1]);
     }
 
-    return new Response("Not Found", { status: 404 });
+    return new Response('Not Found', { status: 404 });
   },
 };

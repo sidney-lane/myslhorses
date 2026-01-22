@@ -8,7 +8,7 @@ integer LINE_MAX_CHARS;
 
 // Line prim names
 string LINE_PRIM_A = "Line1a";
-string LINE_PRIM_B = "Line 1b";
+string LINE_PRIM_B = "Line1b";
 
 // Append Name
 string NAME_APPEND = "*Rockstar Ranch* Text Sign: ";
@@ -310,9 +310,6 @@ default
             {
                 lastLineText = msg;
                 renderLine(1, msg);
-                renderLine(2, "");
-                renderLine(3, "");
-                renderLine(4, "");
                 llSetText(lastLineText, TEXT_COLOR, 1.0);
                 updateRootName(msg);
             }

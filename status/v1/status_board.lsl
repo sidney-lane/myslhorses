@@ -40,7 +40,7 @@ list gColors = [
 ];
 integer gColorIndex = 0;
 
-string buildStatusLine(string name, integer ageDays, integer gender, integer pregval, integer fervor)
+list buildStatusLines(string name, integer ageDays, integer gender, integer pregval, integer fervor)
 {
     string genderLabel = "U";
     if (gender == 1)
@@ -52,23 +52,28 @@ string buildStatusLine(string name, integer ageDays, integer gender, integer pre
         genderLabel = "F";
     }
 
-    string baseLine = genderLabel + " " + (string)ageDays + "d " + name;
+    string line1 = name + " " + genderLabel + " " + (string)ageDays + "d";
+    string line2 = "";
     if (ageDays < 7)
     {
         integer remainingDays = 7 - ageDays;
-        return baseLine + " | Birth + " + (string)remainingDays + "d to 7d";
+        line2 = "Birth + " + (string)remainingDays + "d to 7d";
+        return [line1, line2];
     }
 
     if (pregval > 0)
     {
-        return baseLine + " | Pregnant (" + (string)pregval + "%)";
+        line2 = "Pregnant (" + (string)pregval + "%)";
+        return [line1, line2];
     }
     if (fervor < 100)
     {
-        return baseLine + " | Fervor " + (string)fervor + "%";
+        line2 = "Fervor " + (string)fervor + "%";
+        return [line1, line2];
     }
 
-    return baseLine + " | Recovery";
+    line2 = "Recovery";
+    return [line1, line2];
 }
 
 list parseHorseApi(string raw, string name)
@@ -254,9 +259,8 @@ updateHoverText()
             integer gender = llList2Integer(parsed, 3);
             integer pregval = llList2Integer(parsed, 4);
             integer fervor = llList2Integer(parsed, 5);
-            string line = buildStatusLine(horseName, age, gender, pregval, fervor);
-            statusLines += [line];
-            llSetText(line, llList2Vector(gColors, gColorIndex), 1.0);
+            list lines = buildStatusLines(horseName, age, gender, pregval, fervor);
+            statusLines += lines;
             llOwnerSay("[BUILD STEP 1] Hover text updated for " + horseKey);
         }
         i += 1;
