@@ -24,19 +24,19 @@ It should be menu driven and include
 ## Data Information:
 NOTE: some versions may have slightly different formats.. for now limit to v7.0
 
-Horse API: **Description Field of Object**
+#### Horse API: **Description Field of Object**
 
 DescriptionDataStringFormat: `00000000-0000-0000-0000-000000000000:O111025:1359:0:99:0:100:1:0:0:214.97.51:0:V7.0`
 
 Translation: `Specific ID:Settings info:age:hunger:energy:fervor:happiness:gender:pairing:pregval:home:breed:version`
 
-Bundle API: **Description Field of Object**
+#### Bundle API: **Description Field of Object**
 
 DescriptionDataStringFormat: `SUCCESSFUL_BUNDLE:00000000-0000-0000-0000-000000000000!164!0!1!5!0!0!1!0!0!6!0!0!4:NULL:7.0`
 
 `STATUS:key!breed!mane!tail!eye!gleam!hairgleam!luster!hairluster!gloom!hairgloom!opal!hairopal!branding:RSVD:Version`
 
-SETTINGS Block:
+#### SETTINGS Block:
 
 - O - Mode: (O)wner (G)roup (A)ll
 - 1 - Movement
@@ -46,7 +46,7 @@ SETTINGS Block:
 - 2 - Foodtype
 - 5 - Range ( Can be 2 digits )
 
-Gender:
+#### Gender:
 - 1 is Male
 - 2 is Female
 
