@@ -241,7 +241,9 @@ string pending;
 
 showMainMenu()
 {
-    string hoverLabel = SHOW_HOVERTEXT ? "Hovertext Off" : "Hovertext On";
+    string hoverLabel = "Hovertext On";
+    if (SHOW_HOVERTEXT)
+        hoverLabel = "Hovertext Off";
     llDialog(
         llGetOwner(),
         "\n\n Choose Message Line to Set:\n\n ◆ Line: max " + (string)LINE_MAX_CHARS + " characters \n\n",
