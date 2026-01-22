@@ -295,91 +295,6 @@ sayStats(key agent)
     llRegionSayTo(agent, 0, "Text Color: " + nameColorLabel);
     llRegionSayTo(agent, 0, "Text Color (Stats): " + statusColorLabel);
     llRegionSayTo(agent, 0, "Horses: " + (string)llGetListLength(gHorseKeys));
-
-    integer i = 0;
-    integer count = llGetListLength(gHorseKeys);
-    while (i < count)
-    {
-        string horseName = llList2String(gHorseNames, i);
-        string raw = llList2String(gHorseRaw, i);
-        list parsed = parseHorseApi(raw, horseName);
-        if (llGetListLength(parsed) > 0)
-        {
-            integer age = llList2Integer(parsed, 2);
-            integer gender = llList2Integer(parsed, 3);
-            integer pregval = llList2Integer(parsed, 4);
-            integer fervor = llList2Integer(parsed, 5);
-            list lines = buildStatusLines(horseName, age, gender, pregval, fervor);
-            if (llGetListLength(lines) >= 2)
-            {
-                llRegionSayTo(agent, 0, llList2String(lines, 0));
-                llRegionSayTo(agent, 0, llList2String(lines, 1));
-            }
-        }
-        i += 1;
-    }
-}
-
-scanNow()
-{
-    llSensor("", NULL_KEY, ACTIVE | PASSIVE, gRangeMeters, PI);
-}
-
-sortHorses()
-{
-    list sortList = [];
-    integer i = 0;
-    integer count = llGetListLength(gHorseKeys);
-    while (i < count)
-    {
-        string horseKey = llList2String(gHorseKeys, i);
-        string horseName = llList2String(gHorseNames, i);
-        string raw = llList2String(gHorseRaw, i);
-        integer gender = 0;
-        integer fervor = 0;
-        integer age = 0;
-
-        list fields = llParseString2List(raw, [":"], []);
-        if (llGetListLength(fields) > 9)
-        {
-            age = (integer)llList2String(fields, 2);
-            fervor = (integer)llList2String(fields, 5);
-            gender = (integer)llList2String(fields, 7);
-        }
-
-        integer rank = 2;
-        integer invFervor = 999;
-        integer invAge = 999;
-        if (gender == 1)
-        {
-            rank = 0;
-        }
-        else if (gender == 2)
-        {
-            rank = 1;
-        }
-
-        invFervor = 100 - fervor;
-        invAge = 999 - age;
-        string sortKey = (string)rank + "|" + llGetSubString("000" + (string)invFervor, -3, -1) + "|" + llGetSubString("000" + (string)invAge, -3, -1) + "|" + llToLower(horseName);
-        sortList += [sortKey, horseKey, horseName, raw];
-        i += 1;
-    }
-
-    sortList = llListSort(sortList, 4, TRUE);
-    gHorseKeys = [];
-    gHorseNames = [];
-    gHorseRaw = [];
-
-    i = 0;
-    count = llGetListLength(sortList);
-    while (i < count)
-    {
-        gHorseKeys += [llList2String(sortList, i + 1)];
-        gHorseNames += [llList2String(sortList, i + 2)];
-        gHorseRaw += [llList2String(sortList, i + 3)];
-        i += 4;
-    }
 }
 
 persistConfig()
@@ -470,7 +385,6 @@ showMenu(key agent)
             "Start",
             "Stop",
             "Reset",
-            "Scan Now",
             "Set Range",
             "Set Scan",
             "See Stats",
@@ -500,7 +414,6 @@ handleMenuSelection(key agent, string message)
         {
             gRunning = TRUE;
             llSetTimerEvent((float)(gScanMinutes * 60));
-            scanNow();
         }
     }
     else if (message == "Stop")
@@ -515,15 +428,7 @@ handleMenuSelection(key agent, string message)
     {
         if (agent == llGetOwner())
         {
-            scanNow();
             llResetScript();
-        }
-    }
-    else if (message == "Scan Now")
-    {
-        if (agent == llGetOwner())
-        {
-            scanNow();
         }
     }
     else if (message == "Set Range")
@@ -826,7 +731,6 @@ default
             i += 1;
         }
 
-        sortHorses();
         updateHoverText();
         backendSync();
     }
