@@ -8,7 +8,7 @@ integer listenHandle;
 
 integer PERM_OWNER = 0;
 integer PERM_GROUP = 1;
-integer PERM_ALL = 2;
+integer PERM_OPEN = 2;
 
 integer gRunning = TRUE;
 integer gHoverEnabled = TRUE;
@@ -148,7 +148,7 @@ loadConfig()
 
 integer hasPermission(key agent)
 {
-    if (gPermissions == PERM_ALL)
+    if (gPermissions == PERM_OPEN)
     {
         return TRUE;
     }
