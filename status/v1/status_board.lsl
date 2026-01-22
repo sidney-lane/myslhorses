@@ -39,6 +39,21 @@ list gColors = [
     <1.0, 0.6, 0.2>
 ];
 integer gColorIndex = 0;
+integer MAX_HOVER_LINE_CHARS = 80;
+
+string truncateName(string name, integer maxLen)
+{
+    integer nameLen = llStringLength(name);
+    if (nameLen <= maxLen)
+    {
+        return name;
+    }
+    if (maxLen <= 3)
+    {
+        return llGetSubString(name, 0, maxLen - 1);
+    }
+    return llGetSubString(name, 0, maxLen - 4) + "...";
+}
 
 list buildStatusLines(string name, integer ageDays, integer gender, integer pregval, integer fervor)
 {
@@ -52,7 +67,14 @@ list buildStatusLines(string name, integer ageDays, integer gender, integer preg
         genderLabel = "F";
     }
 
-    string line1 = name + " " + genderLabel + " " + (string)ageDays + "d";
+    string suffix = " " + genderLabel + " " + (string)ageDays + "d";
+    integer maxNameLen = MAX_HOVER_LINE_CHARS - llStringLength(suffix);
+    if (maxNameLen < 1)
+    {
+        maxNameLen = 1;
+    }
+    string safeName = truncateName(name, maxNameLen);
+    string line1 = safeName + suffix;
     string line2 = "";
     if (ageDays < 7)
     {

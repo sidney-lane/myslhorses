@@ -24,6 +24,7 @@ vector TEXT_BLACK   = <0.0, 0.0, 0.0>;
 vector TEXT_RED     = <1.0, 0.0, 0.0>;
 
 vector TEXT_COLOR = TEXT_CYAN;
+integer SHOW_HOVERTEXT = TRUE;
 
 // =========================================
 
@@ -168,7 +169,8 @@ renderMesh(integer linkNum, integer faceCount, list glyphs)
 
         llSetLinkPrimitiveParamsFast(
             linkNum,
-            [PRIM_TEXTURE, i, TEX_UUID, scale, offset, 0.0]
+            [PRIM_TEXTURE, i, TEX_UUID, scale, offset, 0.0,
+             PRIM_COLOR, i, TEXT_COLOR, 1.0]
         );
     }
 }
@@ -199,7 +201,20 @@ string lastLineText;
 setTextColor(vector color)
 {
     TEXT_COLOR = color;
-    llSetText(lastLineText, TEXT_COLOR, 1.0);
+    renderLine(1, lastLineText);
+    if (SHOW_HOVERTEXT)
+        llSetText(lastLineText, TEXT_COLOR, 1.0);
+    else
+        llSetText("", TEXT_COLOR, 0.0);
+}
+
+setHoverTextEnabled(integer enabled)
+{
+    SHOW_HOVERTEXT = enabled;
+    if (SHOW_HOVERTEXT)
+        llSetText(lastLineText, TEXT_COLOR, 1.0);
+    else
+        llSetText("", TEXT_COLOR, 0.0);
 }
 
 updateRootName(string text)
@@ -226,13 +241,15 @@ string pending;
 
 showMainMenu()
 {
+    string hoverLabel = SHOW_HOVERTEXT ? "Hovertext Off" : "Hovertext On";
     llDialog(
         llGetOwner(),
         "\n\n Choose Message Line to Set:\n\n ◆ Line: max " + (string)LINE_MAX_CHARS + " characters \n\n",
         [
             "Set Line",
             "Text Color",
-            "Name Prefix"
+            "Name Prefix",
+            hoverLabel
         ],
         dialogChan
     );
@@ -301,6 +318,8 @@ default
             else if (pending == "White")   { setTextColor(TEXT_WHITE); showMainMenu(); }
             else if (pending == "Black")   { setTextColor(TEXT_BLACK); showMainMenu(); }
             else if (pending == "Red")     { setTextColor(TEXT_RED); showMainMenu(); }
+            else if (pending == "Hovertext Off") { setHoverTextEnabled(FALSE); showMainMenu(); }
+            else if (pending == "Hovertext On")  { setHoverTextEnabled(TRUE); showMainMenu(); }
             return;
         }
 
@@ -310,7 +329,10 @@ default
             {
                 lastLineText = msg;
                 renderLine(1, msg);
-                llSetText(lastLineText, TEXT_COLOR, 1.0);
+                if (SHOW_HOVERTEXT)
+                    llSetText(lastLineText, TEXT_COLOR, 1.0);
+                else
+                    llSetText("", TEXT_COLOR, 0.0);
                 updateRootName(msg);
             }
             else if (pending == "Name Prefix")
