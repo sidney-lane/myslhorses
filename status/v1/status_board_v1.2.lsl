@@ -1,9 +1,9 @@
-// Status Board v1.1 Script
+// Status Board v1.2 Script
 // Implements build steps for hover text, parsing, menus, media refresh, and backend sync.
 // Version notes:
-// - v1 (status_board.lsl): single hover text display, no storage prims.
-// - v1.1: design pivot for storage-prim persistence, bundle cooldown tracking, extra stats input.
-// - v1.2 (status_board_v1.2.lsl): multi-prim hover display by gender/pregnancy/paired.
+// - v1 (status_board.lsl): single hover text display, no multi-prim gender splits.
+// - v1.1: planned storage-prim persistence and extra stats capture (see Project_Readme.md).
+// - v1.2: multi-prim display using male_display/female_display/pregnant_display/paired_display.
 
 integer MAX_HORSES = 10;
 integer MENU_CHANNEL = -90001;
@@ -22,8 +22,12 @@ integer gPendingScanInput = FALSE;
 string gPendingColorTarget = "";
 integer gHoverNameLink = 0;
 integer gHoverStatsLink = 0;
+integer gHoverMaleLink = 0;
+integer gHoverFemaleLink = 0;
+integer gHoverPregnantLink = 0;
+integer gHoverPairedLink = 0;
 
-float gRangeMeters = 10.0;
+float gRangeMeters = 5.0;
 integer gScanMinutes = 1;
 string gBoardId = "pod-01";
 string gBackendUrl = "";
@@ -41,9 +45,15 @@ vector TEXT_MAGENTA = <1.0, 0.0, 1.0>;
 vector TEXT_WHITE   = <1.0, 1.0, 1.0>;
 vector TEXT_BLACK   = <0.0, 0.0, 0.0>;
 vector TEXT_RED     = <1.0, 0.0, 0.0>;
+vector TEXT_PINK    = <1.0, 0.4, 0.7>;
+vector TEXT_TEAL    = <0.0, 0.7, 0.7>;
 
 string HOVER_NAME_PRIM = "HoverName";
 string HOVER_STATS_PRIM = "HoverStats";
+string HOVER_MALE_PRIM = "male_display";
+string HOVER_FEMALE_PRIM = "female_display";
+string HOVER_PREGNANT_PRIM = "pregnant_display";
+string HOVER_PAIRED_PRIM = "paired_display";
 
 list gTextColorNames = [
     "Green", "Blue", "Yellow",
@@ -140,6 +150,24 @@ string hoursLabel(float hours)
     return (string)((integer)hours) + "H";
 }
 
+string formatHoursMinutes(float hours)
+{
+    if (hours <= 0.0)
+    {
+        return "READY";
+    }
+    integer totalMinutes = (integer)(hours * 60.0);
+    integer h = totalMinutes / 60;
+    integer m = totalMinutes % 60;
+    string hStr = (string)h;
+    string mStr = (string)m;
+    if (m < 10)
+    {
+        mStr = "0" + mStr;
+    }
+    return hStr + "H " + mStr + "M";
+}
+
 list buildStatusLines(string name, integer ageDays, integer gender, integer pregval, integer fervor)
 {
     string genderLabel = "U";
@@ -168,27 +196,27 @@ list buildStatusLines(string name, integer ageDays, integer gender, integer preg
     {
         integer remainingDays = 7 - ageDays;
         pregLabel = "Birth +" + (string)remainingDays + "d";
-        fervorLabel = hoursLabel(fervorHours(0));
+        fervorLabel = formatHoursMinutes(fervorHours(0));
         line2 = pregLabel + " | Fervor " + fervorLabel;
         return [line1, line2];
     }
 
     if (pregval > 0 && gender == 2)
     {
-        pregLabel = hoursLabel(pregnancyHours(pregval));
+        pregLabel = formatHoursMinutes(pregnancyHours(pregval));
     }
     if (fervor < 100)
     {
-        fervorLabel = hoursLabel(fervorHours(fervor));
+        fervorLabel = formatHoursMinutes(fervorHours(fervor));
     }
     else
     {
         fervorLabel = "READY";
     }
 
-    if (pregLabel == "--" && fervorLabel == "--")
+    if (gender != 2)
     {
-        line2 = "Recovery";
+        line2 = "Fervor " + fervorLabel;
         return [line1, line2];
     }
 
@@ -299,6 +327,91 @@ sayStats(key agent)
     llRegionSayTo(agent, 0, "Text Color: " + nameColorLabel);
     llRegionSayTo(agent, 0, "Text Color (Stats): " + statusColorLabel);
     llRegionSayTo(agent, 0, "Horses: " + (string)llGetListLength(gHorseKeys));
+
+    integer i = 0;
+    integer count = llGetListLength(gHorseKeys);
+    while (i < count)
+    {
+        string horseName = llList2String(gHorseNames, i);
+        string raw = llList2String(gHorseRaw, i);
+        list parsed = parseHorseApi(raw, horseName);
+        if (llGetListLength(parsed) > 0)
+        {
+            integer age = llList2Integer(parsed, 2);
+            integer gender = llList2Integer(parsed, 3);
+            integer pregval = llList2Integer(parsed, 4);
+            integer fervor = llList2Integer(parsed, 5);
+            list lines = buildStatusLines(horseName, age, gender, pregval, fervor);
+            if (llGetListLength(lines) >= 2)
+            {
+                llRegionSayTo(agent, 0, llList2String(lines, 0));
+                llRegionSayTo(agent, 0, llList2String(lines, 1));
+            }
+        }
+        i += 1;
+    }
+}
+
+scanNow()
+{
+    llSensor("", NULL_KEY, ACTIVE | PASSIVE, gRangeMeters, PI);
+}
+
+sortHorses()
+{
+    list sortList = [];
+    integer i = 0;
+    integer count = llGetListLength(gHorseKeys);
+    while (i < count)
+    {
+        string horseKey = llList2String(gHorseKeys, i);
+        string horseName = llList2String(gHorseNames, i);
+        string raw = llList2String(gHorseRaw, i);
+        integer gender = 0;
+        integer fervor = 0;
+        integer age = 0;
+
+        list fields = llParseString2List(raw, [":"], []);
+        if (llGetListLength(fields) > 9)
+        {
+            age = (integer)llList2String(fields, 2);
+            fervor = (integer)llList2String(fields, 5);
+            gender = (integer)llList2String(fields, 7);
+        }
+
+        integer rank = 2;
+        integer invFervor = 999;
+        integer invAge = 999;
+        if (gender == 1)
+        {
+            rank = 0;
+        }
+        else if (gender == 2)
+        {
+            rank = 1;
+        }
+
+        invFervor = 100 - fervor;
+        invAge = 999 - age;
+        string sortKey = (string)rank + "|" + llGetSubString("000" + (string)invFervor, -3, -1) + "|" + llGetSubString("000" + (string)invAge, -3, -1) + "|" + llToLower(horseName);
+        sortList += [sortKey, horseKey, horseName, raw];
+        i += 1;
+    }
+
+    sortList = llListSort(sortList, 4, TRUE);
+    gHorseKeys = [];
+    gHorseNames = [];
+    gHorseRaw = [];
+
+    i = 0;
+    count = llGetListLength(sortList);
+    while (i < count)
+    {
+        gHorseKeys += [llList2String(sortList, i + 1)];
+        gHorseNames += [llList2String(sortList, i + 2)];
+        gHorseRaw += [llList2String(sortList, i + 3)];
+        i += 4;
+    }
 }
 
 persistConfig()
@@ -389,6 +502,7 @@ showMenu(key agent)
             "Start",
             "Stop",
             "Reset",
+            "Scan Now",
             "Set Range",
             "Set Scan",
             "See Stats",
@@ -418,6 +532,7 @@ handleMenuSelection(key agent, string message)
         {
             gRunning = TRUE;
             llSetTimerEvent((float)(gScanMinutes * 60));
+            scanNow();
         }
     }
     else if (message == "Stop")
@@ -433,6 +548,13 @@ handleMenuSelection(key agent, string message)
         if (agent == llGetOwner())
         {
             llResetScript();
+        }
+    }
+    else if (message == "Scan Now")
+    {
+        if (agent == llGetOwner())
+        {
+            scanNow();
         }
     }
     else if (message == "Set Range")
@@ -505,6 +627,10 @@ updateHoverText()
     {
         setHoverTextOnLink(gHoverNameLink, "", llList2Vector(gTextColors, gNameColorIndex), 0.0);
         setHoverTextOnLink(gHoverStatsLink, "", llList2Vector(gTextColors, gStatusColorIndex), 0.0);
+        setHoverTextOnLink(gHoverMaleLink, "", TEXT_BLUE, 0.0);
+        setHoverTextOnLink(gHoverFemaleLink, "", TEXT_PINK, 0.0);
+        setHoverTextOnLink(gHoverPregnantLink, "", TEXT_TEAL, 0.0);
+        setHoverTextOnLink(gHoverPairedLink, "", TEXT_YELLOW, 0.0);
         if (gHoverNameLink == 0 && gHoverStatsLink == 0)
         {
             llSetText("", llList2Vector(gTextColors, gNameColorIndex), 0.0);
@@ -515,6 +641,10 @@ updateHoverText()
     list nameLines = [];
     list statsLines = [];
     list combinedLines = [];
+    list maleLines = [];
+    list femaleLines = [];
+    list pregnantLines = [];
+    list pairedLines = [];
     integer i = 0;
     integer count = llGetListLength(gHorseKeys);
     while (i < count)
@@ -529,6 +659,12 @@ updateHoverText()
             integer gender = llList2Integer(parsed, 3);
             integer pregval = llList2Integer(parsed, 4);
             integer fervor = llList2Integer(parsed, 5);
+            integer pairing = 0;
+            list fields = llParseString2List(raw, [":"], []);
+            if (llGetListLength(fields) > 8)
+            {
+                pairing = (integer)llList2String(fields, 8);
+            }
             list lines = buildStatusLines(horseName, age, gender, pregval, fervor);
             if (llGetListLength(lines) >= 2)
             {
@@ -537,6 +673,23 @@ updateHoverText()
                 nameLines += [nameLine];
                 statsLines += [statsLine];
                 combinedLines += [nameLine, statsLine];
+
+                if (gender == 1)
+                {
+                    maleLines += [nameLine, statsLine];
+                }
+                else if (gender == 2 && pregval > 0)
+                {
+                    pregnantLines += [nameLine, statsLine];
+                }
+                else if (gender == 2)
+                {
+                    femaleLines += [nameLine, statsLine];
+                }
+            }
+            if (pairing > 0 && gender == 1)
+            {
+                pairedLines += [horseName + " Pair " + (string)pairing];
             }
             debugSay("[BUILD STEP 1] Hover text updated for " + horseKey);
         }
@@ -545,12 +698,32 @@ updateHoverText()
 
     string nameCombined = llDumpList2String(nameLines, "\n");
     string statsCombined = llDumpList2String(statsLines, "\n");
+    string maleCombined = llDumpList2String(maleLines, "\n");
+    string femaleCombined = llDumpList2String(femaleLines, "\n");
+    string pregnantCombined = llDumpList2String(pregnantLines, "\n");
+    string pairedCombined = llDumpList2String(pairedLines, "\n");
     if (gHoverNameLink > 0 || gHoverStatsLink > 0)
     {
         setHoverTextOnLink(gHoverNameLink, nameCombined, llList2Vector(gTextColors, gNameColorIndex), 1.0);
         setHoverTextOnLink(gHoverStatsLink, statsCombined, llList2Vector(gTextColors, gStatusColorIndex), 1.0);
     }
-    else
+    if (gHoverMaleLink > 0)
+    {
+        setHoverTextOnLink(gHoverMaleLink, maleCombined, TEXT_BLUE, 1.0);
+    }
+    if (gHoverFemaleLink > 0)
+    {
+        setHoverTextOnLink(gHoverFemaleLink, femaleCombined, TEXT_PINK, 1.0);
+    }
+    if (gHoverPregnantLink > 0)
+    {
+        setHoverTextOnLink(gHoverPregnantLink, pregnantCombined, TEXT_TEAL, 1.0);
+    }
+    if (gHoverPairedLink > 0)
+    {
+        setHoverTextOnLink(gHoverPairedLink, pairedCombined, TEXT_YELLOW, 1.0);
+    }
+    if (gHoverNameLink == 0 && gHoverStatsLink == 0 && gHoverMaleLink == 0 && gHoverFemaleLink == 0 && gHoverPregnantLink == 0 && gHoverPairedLink == 0)
     {
         string combined = llDumpList2String(combinedLines, "\n");
         llSetText(combined, llList2Vector(gTextColors, gNameColorIndex), 1.0);
@@ -645,9 +818,14 @@ default
         llSetClickAction(CLICK_ACTION_TOUCH);
         gHoverNameLink = linkByName(HOVER_NAME_PRIM);
         gHoverStatsLink = linkByName(HOVER_STATS_PRIM);
+        gHoverMaleLink = linkByName(HOVER_MALE_PRIM);
+        gHoverFemaleLink = linkByName(HOVER_FEMALE_PRIM);
+        gHoverPregnantLink = linkByName(HOVER_PREGNANT_PRIM);
+        gHoverPairedLink = linkByName(HOVER_PAIRED_PRIM);
         if (gRunning)
         {
             llSetTimerEvent((float)(gScanMinutes * 60));
+            scanNow();
         }
     }
 
@@ -657,7 +835,12 @@ default
         llSetClickAction(CLICK_ACTION_TOUCH);
         gHoverNameLink = linkByName(HOVER_NAME_PRIM);
         gHoverStatsLink = linkByName(HOVER_STATS_PRIM);
+        gHoverMaleLink = linkByName(HOVER_MALE_PRIM);
+        gHoverFemaleLink = linkByName(HOVER_FEMALE_PRIM);
+        gHoverPregnantLink = linkByName(HOVER_PREGNANT_PRIM);
+        gHoverPairedLink = linkByName(HOVER_PAIRED_PRIM);
         llSetTimerEvent((float)(gScanMinutes * 60));
+        scanNow();
     }
 
     touch_start(integer total_number)
@@ -735,6 +918,33 @@ default
             i += 1;
         }
 
+        if (llGetListLength(gHorseKeys) > 0)
+        {
+            list validKeys = [];
+            list validNames = [];
+            list validRaw = [];
+            i = 0;
+            integer count = llGetListLength(gHorseKeys);
+            while (i < count)
+            {
+                string horseKey = llList2String(gHorseKeys, i);
+                string horseName = llList2String(gHorseNames, i);
+                string raw = llList2String(gHorseRaw, i);
+                list parsed = parseHorseApi(raw, horseName);
+                if (llGetListLength(parsed) > 0)
+                {
+                    validKeys += [horseKey];
+                    validNames += [horseName];
+                    validRaw += [raw];
+                }
+                i += 1;
+            }
+            gHorseKeys = validKeys;
+            gHorseNames = validNames;
+            gHorseRaw = validRaw;
+        }
+
+        sortHorses();
         updateHoverText();
         backendSync();
     }

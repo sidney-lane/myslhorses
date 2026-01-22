@@ -1,5 +1,9 @@
 // Status Board v1 Script
 // Implements build steps for hover text, parsing, menus, media refresh, and backend sync.
+// Version notes:
+// - Original v1: single hover text display (no multi-prim gender splits).
+// - v1.1: architecture planning only (storage-prim persistence, bundle tracking, extra stats).
+// - v1.2: multi-prim display (male/female/pregnant/paired), moved to status_board_v1.2.lsl.
 
 integer MAX_HORSES = 10;
 integer MENU_CHANNEL = -90001;
@@ -658,7 +662,7 @@ updateHoverText()
         setHoverTextOnLink(gHoverNameLink, nameCombined, llList2Vector(gTextColors, gNameColorIndex), 1.0);
         setHoverTextOnLink(gHoverStatsLink, statsCombined, llList2Vector(gTextColors, gStatusColorIndex), 1.0);
     }
-    else
+    if (gHoverNameLink == 0 && gHoverStatsLink == 0)
     {
         string combined = llDumpList2String(combinedLines, "\n");
         llSetText(combined, llList2Vector(gTextColors, gNameColorIndex), 1.0);
