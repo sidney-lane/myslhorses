@@ -19,7 +19,7 @@ string gPendingColorTarget = "";
 integer gHoverNameLink = 0;
 integer gHoverStatsLink = 0;
 
-float gRangeMeters = 10.0;
+float gRangeMeters = 5.0;
 integer gScanMinutes = 1;
 string gBoardId = "pod-01";
 string gBackendUrl = "";
@@ -136,6 +136,24 @@ string hoursLabel(float hours)
     return (string)((integer)hours) + "H";
 }
 
+string formatHoursMinutes(float hours)
+{
+    if (hours <= 0.0)
+    {
+        return "READY";
+    }
+    integer totalMinutes = (integer)(hours * 60.0);
+    integer h = totalMinutes / 60;
+    integer m = totalMinutes % 60;
+    string hStr = (string)h;
+    string mStr = (string)m;
+    if (m < 10)
+    {
+        mStr = "0" + mStr;
+    }
+    return hStr + "H " + mStr + "M";
+}
+
 list buildStatusLines(string name, integer ageDays, integer gender, integer pregval, integer fervor)
 {
     string genderLabel = "U";
@@ -164,27 +182,27 @@ list buildStatusLines(string name, integer ageDays, integer gender, integer preg
     {
         integer remainingDays = 7 - ageDays;
         pregLabel = "Birth +" + (string)remainingDays + "d";
-        fervorLabel = hoursLabel(fervorHours(0));
+        fervorLabel = formatHoursMinutes(fervorHours(0));
         line2 = pregLabel + " | Fervor " + fervorLabel;
         return [line1, line2];
     }
 
     if (pregval > 0 && gender == 2)
     {
-        pregLabel = hoursLabel(pregnancyHours(pregval));
+        pregLabel = formatHoursMinutes(pregnancyHours(pregval));
     }
     if (fervor < 100)
     {
-        fervorLabel = hoursLabel(fervorHours(fervor));
+        fervorLabel = formatHoursMinutes(fervorHours(fervor));
     }
     else
     {
         fervorLabel = "READY";
     }
 
-    if (pregLabel == "--" && fervorLabel == "--")
+    if (gender != 2)
     {
-        line2 = "Recovery";
+        line2 = "Fervor " + fervorLabel;
         return [line1, line2];
     }
 
@@ -515,7 +533,6 @@ handleMenuSelection(key agent, string message)
     {
         if (agent == llGetOwner())
         {
-            scanNow();
             llResetScript();
         }
     }
@@ -739,6 +756,7 @@ default
         if (gRunning)
         {
             llSetTimerEvent((float)(gScanMinutes * 60));
+            scanNow();
         }
     }
 
@@ -749,6 +767,7 @@ default
         gHoverNameLink = linkByName(HOVER_NAME_PRIM);
         gHoverStatsLink = linkByName(HOVER_STATS_PRIM);
         llSetTimerEvent((float)(gScanMinutes * 60));
+        scanNow();
     }
 
     touch_start(integer total_number)
@@ -824,6 +843,32 @@ default
                 gHorseRaw += [raw];
             }
             i += 1;
+        }
+
+        if (llGetListLength(gHorseKeys) > 0)
+        {
+            list validKeys = [];
+            list validNames = [];
+            list validRaw = [];
+            i = 0;
+            integer count = llGetListLength(gHorseKeys);
+            while (i < count)
+            {
+                string horseKey = llList2String(gHorseKeys, i);
+                string horseName = llList2String(gHorseNames, i);
+                string raw = llList2String(gHorseRaw, i);
+                list parsed = parseHorseApi(raw, horseName);
+                if (llGetListLength(parsed) > 0)
+                {
+                    validKeys += [horseKey];
+                    validNames += [horseName];
+                    validRaw += [raw];
+                }
+                i += 1;
+            }
+            gHorseKeys = validKeys;
+            gHorseNames = validNames;
+            gHorseRaw = validRaw;
         }
 
         sortHorses();
