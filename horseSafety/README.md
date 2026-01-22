@@ -5,6 +5,9 @@ It should
 - only lock horse and or bundle objects (verified by their description string
 - only lock food salt, and other consumable objects (verified by description string)
 
+## Implementation Details
+- May be able to select by creator for ALL rather than need to find them (`JJ Cerna`)
+
 ## Menu
 It should be menu driven and include
 - start / stop / reset (script) buttons
