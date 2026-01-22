@@ -1,7 +1,7 @@
 The idea of this script is to lock all HORSE AND/OR Bundle objects (in the object properties tab) TO HELP PREVENT accidental deletion or return of horses.
 It should
 - only lock horse and or bundle objects (verified by their description string
-- only lock salt, and consumable objects (verified by description string)
+- only lock food salt, and other consumable objects (verified by description string)
 
 
 It should be menu driven and include
