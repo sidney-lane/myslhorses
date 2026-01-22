@@ -7,6 +7,8 @@ It should
 
 ## Implementation Details
 - May be able to select by creator for ALL rather than need to find them (`JJ Cerna`)
+- Use Config flags for variables that may change or could be modular.
+- 
 
 ## Menu
 It should be menu driven and include
