@@ -1,3 +1,13 @@
+# Feature Upgrades
+
+- Change sensor type
+- Sort mares by most pregnant
+- sensor range particles
+-  
+
+
+
+
 # Status Board TODO
 
 ## status_board.lsl
