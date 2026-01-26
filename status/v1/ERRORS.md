@@ -9,8 +9,9 @@ Check:
 
 See `Sensoring in LSL notes`
 
+---
 
-2. **Fervor Calculation appears to be incorrect**
+## **Pregnancy & Fervor Information**
 
 - For accurate fervor and pregnancy calculations: [see this page](https://amarettobreedables.com/connections/news/%F0%9F%93%85-the-ultimate-guide-to-amaretto-horse-pregnancy-and-fervor-calculators-%F0%9F%90%8E%F0%9F%92%9A-r816/) 
 
@@ -35,7 +36,7 @@ See `Sensoring in LSL notes`
 
 - Interesting - **but not relevant to calculation**: [Festive Drops Info](https://amarettobreedables.com/connections/news/smart-breeding-101-r931/)
 
-
+---
 
 
 ## Sensoring in LSL notes
