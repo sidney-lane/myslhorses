@@ -7,9 +7,39 @@ Check:
 - check sensor "shape" (should be a circle -> or perhaps add the shape "type" to the menu if easy)
 - Ideally rez a particle field at the edge of the sensor field when setting range so its easy to see whats included
 
+See `Sensoring in LSL notes`
+
+
+2. **Fervor Calculation appears to be incorrect**
+
+- For accurate fervor and pregnancy calculations: [see this page](https://amarettobreedables.com/connections/news/%F0%9F%93%85-the-ultimate-guide-to-amaretto-horse-pregnancy-and-fervor-calculators-%F0%9F%90%8E%F0%9F%92%9A-r816/) 
+
+- Fervor Times Image:
+<img width="346" height="725" alt="image" src="https://github.com/user-attachments/assets/6c3d8587-b449-46b7-b4a8-1fd11c0cf655" />
+
+- Pregnancy Times Image:
+<img width="466" height="607" alt="image" src="https://github.com/user-attachments/assets/9a1c6252-382d-411a-a1ef-99126cd30a04" />
+
+- Pregancy Contraints (**Important Information**): [See this guide](https://amarettobreedables.com/connections/news/amaretto-breeding-times-r527/)
+  - Horses can start breeding at 7 days old
+  - Horses need 100% fervor to breed
+  - Fervor takes 2-3 days to go from 0 to 100% (timings above)
+  - (mares only) Pregnancy takes **3 days**
+  - (mares only) Pregnancy Recovery (after birthing a "bundle") is **4 days**
+    - The average time a female takes to breed is therefore about **9 days** (fervor: 2-3 -> pregnancy: 3 -> pregnancy recovery -> 4)
+  - Horses can breed until they are 120 days old
+  - Horses can be given consumables to increase fervor, shorten pregnancy decrease hunger and other settings.
+
+  Additional notes:
+  - Happiness must be 75% to gain fervor
+
+- Interesting - **but not relevant to calculation**: [Festive Drops Info](https://amarettobreedables.com/connections/news/smart-breeding-101-r931/)
+
+
+
+
 ## Sensoring in LSL notes
 In Second Life (LSL), if `llSensor` or `llSensorRepeat` are missing objects, it is likely due to limitations in how the simulator processes them, particularly regarding object center points, attachment detection, or rate limits. 
-
 
 Here are the best ways to sense objects, ranging from improved sensor usage to more reliable methods:
 
