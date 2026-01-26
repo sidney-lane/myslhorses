@@ -3,15 +3,25 @@
 This script will rezz horses (no copy, no mod) in formations as defined by the user (6 horses only) from a box prim they are dropped in.
 
 The script will rez (copy) ojects in the position chosen by the user when chosen, so a user can see where items will rez.
-These ojects will be derezzed (killed) once the user selects "Rez" to rez horses instead.
+The user will be able to select from a predefined pattern (below) OR custom placement (X number of prims - chosen by user (up to 10) can be rezzed in custom mode - the user will put them in the pattern the want and this custom pattern can be saved with a name in the script also for future use).
 
-Formations (6 horses)
+They will rezz within a 5m radius. for Formation 1-4. For 5: up/down - up should be at 6m above down.
+
+These prim ojects will be derezzed (killed) once the user selects "Rez" and the horses (dropped into root prim) will be rezzed in their position instead. 
+
+#### Formations (6 horses)
+
+Key: 
+- S = Male / STUD
+- M = Female / Mare
+- PM = Primary female/mare (mare with most fevor)
+
 1. Star
 
 ```
-M   M   M
+M      M
 
-    S
+  S PM
    
 M      M
 ```
@@ -21,7 +31,7 @@ M      M
 ```
 M  M  M  M
 
-    SM
+   S PM
 ```
 
 3. Triangle
@@ -29,33 +39,56 @@ M  M  M  M
 ```
 M  M  M
 
- M  M
+ PM  M
  
-   S
+  S
 ```
 
 4. Line
 
 ```
-M  M  SM  M  M
+M  M  PM S  M  M
 ```
 
-8. Up/Down
+5. Up/Down
 
 ```
 Up: M  M  M  M
 
-Down: SM
+Down: S PM
 ```
 
+6. Cutom Mode (described above)
+   
+Custom placement of X number of 'rezzer prims' - chosen by user (up to 12) can be rezzed in custom mode - the user will put them in the formation they want and this custom pattern can be saved with a name in the script also for future use).
+- select 1 male or 2 males (we will use male and female "rezzer prims" inside the control rezzer prim to make it easy)
+- save custom position (with name)
 
-Script will
-- Auto detect the Male horse (and rez it in "S" - Stud position (if more than one - will just use first stud)
-- Auto detect mare with most fervour to place in "primary" position near stud
+7. Double POD (v2 version)
+Selection on 
+Will rez 2 "formations".
 
-Menu driven
+#### Script function
+- Auto detect the Male horse (and rez it in "S" - Stud position (if more than one - will just use first stud dropped in)
+- Auto detect mare with most fervour to place in "primary" position near stud.
+- 
+
+#### Menu driven commands
 - start/stop/reset (Scripts)
-- pod/all (either rez a pod with a stud and mares OR just rezz all horses)
+- creator only debug option
+- choose formation
+     - choose 1 or 2 "pods" (2 pods has 2 males) 
+- custom formation
+     - choose number of horses (up to 12)
+     - choose number of males (1 or 2)
+     - choose "Base formation" - ie choose one of the predefined formations to start the custom rez from
+     - place rezzer prims (within 20m ? any constraints on distance?)
+     - save as (name)
+- 'just rez' mode (line with settings)
+     - rez horses in a line
+     - select number: "rez 1", "rez X" (user input), "rez all"
+     - select distance apart (0.5m -> 5m in 0.5m intervals)
+- 
 
 #### Data: Horse API
 **Horse API:**
@@ -86,4 +119,4 @@ Rezzer stores COPY items in inventory
 
 # Bundle Rezzer
 - Bundle (no copy, no mod) items
-- related to organiser project
+- related to organiser project.
